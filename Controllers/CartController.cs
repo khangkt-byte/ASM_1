@@ -17,14 +17,21 @@ namespace ASM_1.Controllers
         private readonly TableCodeService _tableCodeService;
         private readonly UserSessionService _userSessionService;
         private readonly ITableTrackerService _tableTracker;
+        private readonly OrderNotificationService _orderNotificationService;
         private static readonly JsonSerializerOptions JsonOptions = new() { PropertyNameCaseInsensitive = true };
 
-        public CartController(ApplicationDbContext context, TableCodeService tableCodeService, UserSessionService userSessionService, ITableTrackerService tableTracker)
+        public CartController(
+            ApplicationDbContext context,
+            TableCodeService tableCodeService,
+            UserSessionService userSessionService,
+            ITableTrackerService tableTracker,
+            OrderNotificationService orderNotificationService)
             : base(context)
         {
             _tableCodeService = tableCodeService;
             _userSessionService = userSessionService;
             _tableTracker = tableTracker;
+            _orderNotificationService = orderNotificationService;
         }
 
         [HttpGet("{tableCode}/cart")]
@@ -238,6 +245,8 @@ namespace ASM_1.Controllers
                 await _context.SaveChangesAsync();
 
                 await tx.CommitAsync();
+
+                await _orderNotificationService.RefreshAndBroadcastAsync(order.OrderId);
 
                 TempData["OrderSuccess"] = true;
                 TempData["PaymentMethod"] = normalizedPayment;
