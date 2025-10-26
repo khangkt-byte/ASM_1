@@ -246,7 +246,7 @@ namespace ASM_1.Controllers
 
                 await tx.CommitAsync();
 
-                await _orderNotificationService.RefreshAndBroadcastAsync(order.OrderId);
+                await _orderNotificationService.RefreshAndBroadcastAsync(order.OrderId, true);
 
                 TempData["OrderSuccess"] = true;
                 TempData["PaymentMethod"] = normalizedPayment;

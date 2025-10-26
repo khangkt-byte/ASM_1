@@ -22,13 +22,14 @@ namespace ASM_1.Services
             _tableCodeService = tableCodeService;
         }
 
-        public async Task RefreshAndBroadcastAsync(int orderId)
+        public async Task RefreshAndBroadcastAsync(int orderId, bool isNewOrder = false)
         {
             var order = await _context.Orders
                 .Include(o => o.Items)
                     .ThenInclude(i => i.FoodItem)
                 .Include(o => o.Items)
                     .ThenInclude(i => i.Options)
+                .Include(o => o.Invoice)
                 .FirstOrDefaultAsync(o => o.OrderId == orderId);
 
             if (order == null)
@@ -47,10 +48,10 @@ namespace ASM_1.Services
             order.UpdatedAt = now;
             await _context.SaveChangesAsync();
 
-            await BroadcastAsync(order);
+            await BroadcastAsync(order, isNewOrder);
         }
 
-        private async Task BroadcastAsync(Order order)
+        private async Task BroadcastAsync(Order order, bool isNewOrder)
         {
             var tableCode = _tableCodeService.EncryptTableId(order.TableId);
 
@@ -64,6 +65,21 @@ namespace ASM_1.Services
             await _hubContext.Clients
                 .Group($"order:{order.OrderId}")
                 .SendAsync("OrderDetailsUpdated", detail);
+
+            var staffPayload = new
+            {
+                summary,
+                detail = detail.order,
+                isNewOrder
+            };
+
+            await _hubContext.Clients
+                .Group("staff:cashier")
+                .SendAsync("StaffOrderUpdated", staffPayload);
+
+            await _hubContext.Clients
+                .Group("staff:kitchen")
+                .SendAsync("StaffOrderUpdated", staffPayload);
         }
 
         private static object BuildSummary(Order order)
@@ -72,6 +88,8 @@ namespace ASM_1.Services
             {
                 id = order.OrderId,
                 code = order.OrderCode,
+                invoiceCode = order.Invoice?.InvoiceCode,
+                invoiceStatus = order.Invoice?.Status,
                 placedAt = order.CreatedAt,
                 table = order.TableNameSnapshot,
                 sum = order.TotalAmount,

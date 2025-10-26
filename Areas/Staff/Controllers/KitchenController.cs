@@ -82,6 +82,21 @@ namespace ASM_1.Areas.Staff.Controllers
             return RedirectToAction(nameof(Index));
         }
 
+        [HttpGet]
+        public async Task<IActionResult> DashboardData()
+        {
+            var model = await BuildDashboardAsync();
+
+            var result = new
+            {
+                pending = model.PendingOrders.Select(MapKitchenItemDto).ToList(),
+                inProgress = model.InProgressOrders.Select(MapKitchenItemDto).ToList(),
+                ready = model.ReadyOrders.Select(MapKitchenItemDto).ToList()
+            };
+
+            return Json(result);
+        }
+
         private async Task<KitchenDashboardViewModel> BuildDashboardAsync()
         {
             var orderItems = await _context.OrderItems
@@ -132,6 +147,21 @@ namespace ASM_1.Areas.Staff.Controllers
                 CreatedAt = item.CreatedAt,
                 Note = item.Note,
                 Options = options
+            };
+        }
+
+        private static object MapKitchenItemDto(KitchenOrderItemViewModel item)
+        {
+            return new
+            {
+                id = item.OrderItemId,
+                invoiceCode = item.InvoiceCode,
+                foodName = item.FoodName,
+                quantity = item.Quantity,
+                status = item.Status.ToString(),
+                createdAt = item.CreatedAt,
+                note = item.Note,
+                options = item.Options
             };
         }
 
