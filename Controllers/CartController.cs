@@ -157,14 +157,14 @@ namespace ASM_1.Controllers
                 }
             }
 
-            var splitResult = PaymentSplitCalculator.Compute(splitRequest, cart.CartItems, finalAmount, normalizedPayment);
-            bool isPrepaid = splitResult.AllPrepaid;
+            var splitComputation = PaymentSplitCalculator.Compute(splitRequest, cart.CartItems, finalAmount, normalizedPayment);
+            bool isPrepaid = splitComputation.AllPrepaid;
             var nowLocal = DateTime.Now;
 
             string splitMode = Request.Form["splitMode"];
             string splitPayloadRaw = Request.Form["splitPayload"];
             var splitPayload = PaymentSplitService.DeserializePayload(splitPayloadRaw);
-            var splitResult = PaymentSplitService.CalculateSplit(splitMode, splitPayload, cart.CartItems, finalAmount);
+            var splitDisplay = PaymentSplitService.CalculateSplit(splitMode, splitPayload, cart.CartItems, finalAmount);
 
             bool invoiceRequested = string.Equals(Request.Form["invoiceRequest"], "on", StringComparison.OrdinalIgnoreCase)
                 || string.Equals(Request.Form["invoiceRequest"], "true", StringComparison.OrdinalIgnoreCase);
@@ -177,7 +177,7 @@ namespace ASM_1.Controllers
                 Request.Form["invoiceAddress"],
                 Request.Form["invoiceNote"]);
 
-            var invoiceNote = PaymentSplitService.ComposeInvoiceNote(splitResult, invoiceRequest);
+            var invoiceNote = PaymentSplitService.ComposeInvoiceNote(splitDisplay, invoiceRequest);
 
             using var tx = await _context.Database.BeginTransactionAsync();
             try
@@ -189,7 +189,7 @@ namespace ASM_1.Controllers
                     TotalAmount = finalAmount,
                     FinalAmount = finalAmount,
                     Status = isPrepaid ? "Paid" : "Pending",
-                    Notes = splitResult.DisplayLabel,
+                    Notes = splitComputation.DisplayLabel,
                     IsPrepaid = isPrepaid
                 };
                 _context.Invoices.Add(invoice);
@@ -204,7 +204,7 @@ namespace ASM_1.Controllers
                     Status = OrderStatus.Pending,
                     Note = null,
                     TotalAmount = finalAmount,
-                    PaymentMethod = BuildOrderPaymentLabel(splitResult),
+                    PaymentMethod = BuildOrderPaymentLabel(splitComputation),
                     InvoiceId = invoice.InvoiceId,
                     CreatedAt = nowLocal,
                     UpdatedAt = nowLocal
@@ -270,9 +270,9 @@ namespace ASM_1.Controllers
                     _context.OrderItemOptions.AddRange(optionSnapshots);
                 }
 
-                if (splitResult.Shares.Count > 0)
+                if (splitComputation.Shares.Count > 0)
                 {
-                    foreach (var share in splitResult.Shares)
+                    foreach (var share in splitComputation.Shares)
                     {
                         string? meta = null;
                         if (share.ItemQuantities != null && share.ItemQuantities.Count > 0)
@@ -291,7 +291,7 @@ namespace ASM_1.Controllers
                             DisplayName = share.DisplayName,
                             Amount = share.Amount,
                             PaymentMethod = share.PaymentMethod,
-                            SplitMode = splitResult.Mode.ToString(),
+                            SplitMode = splitComputation.Mode.ToString(),
                             Percentage = share.Percentage,
                             MetaJson = meta,
                             CreatedAt = nowLocal
@@ -309,10 +309,10 @@ namespace ASM_1.Controllers
                 await _orderNotificationService.RefreshAndBroadcastAsync(order.OrderId);
 
                 TempData["OrderSuccess"] = true;
-                TempData["PaymentMethod"] = splitResult.DisplayLabel;
+                TempData["PaymentMethod"] = splitComputation.DisplayLabel;
                 TempData["TableName"] = order.TableNameSnapshot;
                 TempData["OrderCode"] = order.OrderCode;
-                TempData["PaymentShares"] = JsonSerializer.Serialize(splitResult.Shares.Select(s => new
+                TempData["PaymentShares"] = JsonSerializer.Serialize(splitComputation.Shares.Select(s => new
                 {
                     participantId = s.ParticipantId,
                     name = s.DisplayName,
@@ -321,16 +321,16 @@ namespace ASM_1.Controllers
                     percentage = s.Percentage
                 }), JsonOptions);
 
-                if (!string.IsNullOrWhiteSpace(splitResult.Notes))
+                if (!string.IsNullOrWhiteSpace(splitDisplay.Notes))
                 {
-                    TempData["PaymentSplitSummary"] = splitResult.Notes;
-                    TempData["PaymentSplitParticipants"] = JsonSerializer.Serialize(splitResult.Participants, new JsonSerializerOptions
+                    TempData["PaymentSplitSummary"] = splitDisplay.Notes;
+                    TempData["PaymentSplitParticipants"] = JsonSerializer.Serialize(splitDisplay.Participants, new JsonSerializerOptions
                     {
                         PropertyNamingPolicy = JsonNamingPolicy.CamelCase
                     });
-                    if (!string.IsNullOrWhiteSpace(splitResult.AdditionalNote))
+                    if (!string.IsNullOrWhiteSpace(splitDisplay.AdditionalNote))
                     {
-                        TempData["PaymentSplitNote"] = splitResult.AdditionalNote;
+                        TempData["PaymentSplitNote"] = splitDisplay.AdditionalNote;
                     }
                 }
 
