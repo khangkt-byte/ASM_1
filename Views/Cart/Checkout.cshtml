@@ -26,6 +26,108 @@
 }
 @section Styles {
     <link rel="stylesheet" href="~/css/pages/checkout.css" />
+    <style>
+        .split-options {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-bottom: 15px;
+        }
+
+        .split-option {
+            flex: 1 1 220px;
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 10px;
+            padding: 12px 16px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+            .split-option input {
+                width: 20px;
+                height: 20px;
+            }
+
+            .split-option.active,
+            .split-option:hover {
+                border-color: #0d6efd;
+                background: #eef4ff;
+                box-shadow: 0 0 0 2px rgba(13, 110, 253, 0.1);
+            }
+
+        .participant-row {
+            display: grid;
+            grid-template-columns: minmax(140px, 1fr) 120px 120px 40px;
+            gap: 10px;
+            margin-bottom: 10px;
+            align-items: center;
+        }
+
+            .participant-row .participant-amount {
+                font-weight: 600;
+                color: #0d6efd;
+                text-align: right;
+            }
+
+        .participant-row .btn-remove {
+            color: #dc3545;
+            border: none;
+            background: transparent;
+            font-size: 16px;
+        }
+
+        .item-assignment {
+            border: 1px solid #e9ecef;
+            border-radius: 10px;
+            padding: 12px;
+            background: #fdfdfd;
+        }
+
+        .item-assignment-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 15px;
+            padding: 8px 0;
+            border-bottom: 1px dashed #dee2e6;
+        }
+
+            .item-assignment-row:last-child {
+                border-bottom: none;
+            }
+
+        .item-assignment-row .item-name {
+            font-weight: 500;
+            flex: 1 1 auto;
+        }
+
+        .split-summary {
+            margin-top: 12px;
+            border-top: 1px dashed #dee2e6;
+            padding-top: 12px;
+        }
+
+        .invoice-details {
+            margin-top: 15px;
+            padding: 12px;
+            border-radius: 10px;
+            background: #f8f9fa;
+        }
+
+        @media (max-width: 768px) {
+            .participant-row {
+                grid-template-columns: 1fr;
+            }
+
+                .participant-row .participant-amount {
+                    text-align: left;
+                }
+        }
+    </style>
 }
 
 <div class="checkout-page">
@@ -65,6 +167,59 @@
             <div class="checkout-main">
                 <form id="checkoutForm" asp-controller="Cart" asp-action="PlaceOrder" asp-route-tableCode="@tableCode" method="post">
                     @Html.AntiForgeryToken()
+                    <input type="hidden" name="splitMode" id="splitModeInput" value="single" />
+                    <input type="hidden" name="splitPayload" id="splitPayloadInput" />
+
+                    <div class="checkout-section">
+                        <h2><i class="fas fa-users"></i> Chia hóa đơn</h2>
+
+                        <div class="split-options" id="splitModeOptions">
+                            <label class="split-option active">
+                                <input type="radio" name="splitModeSelector" value="single" checked>
+                                <div>
+                                    <strong>Một người thanh toán</strong>
+                                    <div>Người đại diện thanh toán toàn bộ hóa đơn</div>
+                                </div>
+                            </label>
+                            <label class="split-option">
+                                <input type="radio" name="splitModeSelector" value="equal">
+                                <div>
+                                    <strong>Chia đều bill</strong>
+                                    <div>Mỗi người trả phần bằng nhau</div>
+                                </div>
+                            </label>
+                            <label class="split-option">
+                                <input type="radio" name="splitModeSelector" value="percentage">
+                                <div>
+                                    <strong>Chia theo %</strong>
+                                    <div>Định phần trăm cho từng người</div>
+                                </div>
+                            </label>
+                            <label class="split-option">
+                                <input type="radio" name="splitModeSelector" value="items">
+                                <div>
+                                    <strong>Chia theo món</strong>
+                                    <div>Ai gọi món nào trả món đó</div>
+                                </div>
+                            </label>
+                        </div>
+
+                        <div class="participant-controls mb-3">
+                            <div id="participantList"></div>
+                            <button type="button" class="btn btn-outline-primary btn-sm" id="addParticipantBtn">
+                                <i class="fas fa-user-plus"></i> Thêm người cùng bàn
+                            </button>
+                        </div>
+
+                        <div id="itemAssignment" class="item-assignment d-none"></div>
+
+                        <div class="mb-3">
+                            <label class="form-label" for="splitNoteInput">Ghi chú chia bill (tuỳ chọn)</label>
+                            <textarea class="form-control" id="splitNoteInput" rows="2" placeholder="Ví dụ: Anh A trả giúp bàn"></textarea>
+                        </div>
+
+                        <div class="split-summary" id="splitSummary"></div>
+                    </div>
 
                     <!-- Payment Method -->
                     <div class="checkout-section">
@@ -166,6 +321,39 @@
 
                         <input type="hidden" name="splitInfo" id="splitInfoInput" />
                     </div>
+
+                    <div class="checkout-section">
+                        <h2><i class="fas fa-file-invoice"></i> Thông tin hóa đơn</h2>
+                        <div class="form-check form-switch mb-3">
+                            <input class="form-check-input" type="checkbox" id="invoiceRequestToggle" name="invoiceRequest">
+                            <label class="form-check-label" for="invoiceRequestToggle">Yêu cầu xuất hóa đơn VAT</label>
+                        </div>
+                        <div id="invoiceDetails" class="invoice-details d-none">
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Tên công ty / người nhận hóa đơn</label>
+                                    <input type="text" class="form-control" name="invoiceCompanyName" />
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Mã số thuế</label>
+                                    <input type="text" class="form-control" name="invoiceTaxCode" />
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Email nhận hóa đơn</label>
+                                    <input type="email" class="form-control" name="invoiceEmail" />
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Địa chỉ</label>
+                                    <input type="text" class="form-control" name="invoiceAddress" />
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label">Ghi chú cho hóa đơn</label>
+                                    <textarea class="form-control" name="invoiceNote" rows="2" placeholder="Ví dụ: Xuất hóa đơn cho công ty..."></textarea>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                 </form>
             </div>
 
@@ -183,7 +371,6 @@
                                     <div class="item-info">
                                         <h4>@item.ProductName</h4>
 
-                                        <!-- Danh sách Option (linh hoạt theo OptionType) -->
                                         @if (item.Options != null && item.Options.Any())
                                         {
                                             <ul class="item-options">
@@ -194,7 +381,6 @@
                                             </ul>
                                         }
 
-                                        <!-- Ghi chú -->
                                         @if (!string.IsNullOrEmpty(item.Note))
                                         {
                                             <div class="item-note">
@@ -246,7 +432,6 @@
                             <i class="fas fa-arrow-left"></i> Quay lại giỏ hàng
                         </a>
 
-                        <!-- Nút đặt hàng -->
                         <button type="submit" class="btn-place-order" form="checkoutForm">
                             <i class="fas fa-check"></i>
                             Thanh toán

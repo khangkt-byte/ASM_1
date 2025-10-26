@@ -161,6 +161,24 @@ namespace ASM_1.Controllers
             bool isPrepaid = splitResult.AllPrepaid;
             var nowLocal = DateTime.Now;
 
+            string splitMode = Request.Form["splitMode"];
+            string splitPayloadRaw = Request.Form["splitPayload"];
+            var splitPayload = PaymentSplitService.DeserializePayload(splitPayloadRaw);
+            var splitResult = PaymentSplitService.CalculateSplit(splitMode, splitPayload, cart.CartItems, finalAmount);
+
+            bool invoiceRequested = string.Equals(Request.Form["invoiceRequest"], "on", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(Request.Form["invoiceRequest"], "true", StringComparison.OrdinalIgnoreCase);
+
+            var invoiceRequest = PaymentSplitService.BuildInvoiceRequestInfo(
+                invoiceRequested,
+                Request.Form["invoiceCompanyName"],
+                Request.Form["invoiceTaxCode"],
+                Request.Form["invoiceEmail"],
+                Request.Form["invoiceAddress"],
+                Request.Form["invoiceNote"]);
+
+            var invoiceNote = PaymentSplitService.ComposeInvoiceNote(splitResult, invoiceRequest);
+
             using var tx = await _context.Database.BeginTransactionAsync();
             try
             {
@@ -302,6 +320,29 @@ namespace ASM_1.Controllers
                     method = s.PaymentMethod,
                     percentage = s.Percentage
                 }), JsonOptions);
+
+                if (!string.IsNullOrWhiteSpace(splitResult.Notes))
+                {
+                    TempData["PaymentSplitSummary"] = splitResult.Notes;
+                    TempData["PaymentSplitParticipants"] = JsonSerializer.Serialize(splitResult.Participants, new JsonSerializerOptions
+                    {
+                        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+                    });
+                    if (!string.IsNullOrWhiteSpace(splitResult.AdditionalNote))
+                    {
+                        TempData["PaymentSplitNote"] = splitResult.AdditionalNote;
+                    }
+                }
+
+                if (invoiceRequest?.IsRequested == true)
+                {
+                    TempData["InvoiceRequested"] = true;
+                    TempData["InvoiceCompany"] = invoiceRequest.CompanyName;
+                    TempData["InvoiceTaxCode"] = invoiceRequest.TaxCode;
+                    TempData["InvoiceEmail"] = invoiceRequest.Email;
+                    TempData["InvoiceAddress"] = invoiceRequest.Address;
+                    TempData["InvoiceNote"] = invoiceRequest.Note;
+                }
 
                 return RedirectToAction(nameof(Success), new { tableCode });
             }
