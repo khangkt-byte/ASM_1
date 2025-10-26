@@ -163,9 +163,13 @@ function addToCart(foodId) {
 
 function showNotification(message, type = 'info', options) {
     const opts = (options && typeof options === 'object') ? options : {};
-    const duration = Number.isFinite(opts.duration) && opts.duration > 0 ? opts.duration : 3000;
-    const persist = Boolean(opts.persist);
     const storageId = typeof opts.storageId === 'string' && opts.storageId ? opts.storageId : null;
+    const persist = Boolean(opts.persist || storageId);
+    const duration = Number.isFinite(opts.duration) && opts.duration > 0 ? opts.duration : 5000;
+    const normalizedType = typeof type === 'string' ? type.toLowerCase() : 'info';
+    const resolvedType = ['success', 'error', 'warning', 'info'].includes(normalizedType)
+        ? normalizedType
+        : (normalizedType === 'danger' ? 'error' : 'info');
 
     const id = storageId || `notif-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 
@@ -173,59 +177,65 @@ function showNotification(message, type = 'info', options) {
         persistNotificationEntry({
             id,
             message,
-            type,
+            type: resolvedType,
             duration
         });
     }
 
+    let container = document.querySelector('.notification-container');
+    if (!container) {
+        container = document.createElement('div');
+        container.className = 'notification-container';
+        container.setAttribute('role', 'region');
+        container.setAttribute('aria-live', 'polite');
+        document.body.appendChild(container);
+    }
+
+    const existing = container.querySelector(`.notification[data-notification-id="${id}"]`);
+    if (existing) {
+        existing.remove();
+    }
+
     const notification = document.createElement('div');
-    notification.className = `notification ${type}`;
+    notification.className = `notification notification-${resolvedType}`;
     notification.dataset.notificationId = id;
+    notification.dataset.notificationType = resolvedType;
     notification.setAttribute('role', 'status');
 
-    const background = {
-        success: 'var(--success-color)',
-        warning: 'var(--warning-color)',
-        error: 'var(--danger-color)',
-        danger: 'var(--danger-color)'
-    }[type] || 'var(--primary-color)';
+    const content = document.createElement('div');
+    content.className = 'notification-content';
 
+    const icon = document.createElement('i');
     const iconClass = {
         success: 'fa-check-circle',
         warning: 'fa-triangle-exclamation',
-        error: 'fa-circle-xmark',
-        danger: 'fa-circle-xmark'
-    }[type] || 'fa-circle-info';
+        error: 'fa-circle-xmark'
+    }[resolvedType] || 'fa-circle-info';
+    icon.className = `fas notification-icon ${iconClass}`;
 
-    notification.style.cssText = `
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        padding: 16px 20px;
-        background: ${background};
-        color: white;
-        border-radius: var(--border-radius);
-        z-index: 10000;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        box-shadow: var(--shadow-hover);
-        animation: slideInRight 0.3s ease;
-        font-weight: 500;
-        cursor: pointer;
-    `;
-
-    const icon = document.createElement('i');
-    icon.className = `fas ${iconClass}`;
     const messageSpan = document.createElement('span');
+    messageSpan.className = 'notification-message';
     messageSpan.textContent = message;
 
-    notification.appendChild(icon);
-    notification.appendChild(messageSpan);
+    const closeButton = document.createElement('button');
+    closeButton.type = 'button';
+    closeButton.className = 'notification-close';
+    closeButton.setAttribute('aria-label', 'Đóng thông báo');
+    closeButton.innerHTML = '<i class="fas fa-times"></i>';
 
-    document.body.appendChild(notification);
+    content.appendChild(icon);
+    content.appendChild(messageSpan);
+    content.appendChild(closeButton);
+    notification.appendChild(content);
+    container.appendChild(notification);
+
+    window.requestAnimationFrame(() => {
+        notification.classList.add('notification-show');
+    });
 
     let dismissed = false;
+    let hideTimer = null;
+
     const finalizeRemoval = () => {
         if (dismissed) {
             return;
@@ -235,6 +245,9 @@ function showNotification(message, type = 'info', options) {
             removePersistentNotification(id);
         }
         notification.remove();
+        if (!container.childElementCount) {
+            container.remove();
+        }
     };
 
     const hideNotification = () => {
@@ -242,31 +255,48 @@ function showNotification(message, type = 'info', options) {
             return;
         }
         dismissed = true;
-        notification.style.animation = 'slideOutRight 0.3s ease';
-        setTimeout(() => {
-            if (persist || storageId) {
-                removePersistentNotification(id);
-            }
-            notification.remove();
-        }, 300);
+        notification.classList.remove('notification-show');
+        notification.classList.add('notification-hide');
+        window.setTimeout(finalizeRemoval, 250);
     };
 
-    let hideTimer = window.setTimeout(hideNotification, duration);
+    const startHideTimer = (delay) => {
+        if (!persist && delay > 0) {
+            hideTimer = window.setTimeout(hideNotification, delay);
+        }
+    };
 
-    notification.addEventListener('click', () => {
-        window.clearTimeout(hideTimer);
+    const clearHideTimer = () => {
+        if (hideTimer) {
+            window.clearTimeout(hideTimer);
+            hideTimer = null;
+        }
+    };
+
+    if (!persist) {
+        startHideTimer(duration);
+    }
+
+    notification.addEventListener('mouseenter', clearHideTimer);
+    notification.addEventListener('mouseleave', () => {
+        if (!dismissed && !persist) {
+            startHideTimer(1500);
+        }
+    });
+
+    closeButton.addEventListener('click', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        clearHideTimer();
         hideNotification();
     });
 
-    notification.addEventListener('mouseenter', () => {
-        window.clearTimeout(hideTimer);
-    });
-
-    notification.addEventListener('mouseleave', () => {
-        if (!dismissed) {
-            window.clearTimeout(hideTimer);
-            hideTimer = window.setTimeout(hideNotification, 500);
+    notification.addEventListener('click', (event) => {
+        if (event.target === closeButton || closeButton.contains(event.target)) {
+            return;
         }
+        clearHideTimer();
+        hideNotification();
     });
 
     return {
