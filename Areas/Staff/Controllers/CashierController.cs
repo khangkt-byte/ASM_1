@@ -115,6 +115,21 @@ namespace ASM_1.Areas.Staff.Controllers
             return View(model);
         }
 
+        [HttpGet]
+        public async Task<IActionResult> DashboardData()
+        {
+            var model = await BuildDashboardAsync();
+
+            var result = new
+            {
+                waiting = model.WaitingInvoices.Select(MapInvoiceDto).ToList(),
+                ready = model.ReadyInvoices.Select(MapInvoiceDto).ToList(),
+                completed = model.CompletedInvoices.Select(MapInvoiceDto).ToList()
+            };
+
+            return Json(result);
+        }
+
         private async Task<CashierDashboardViewModel> BuildDashboardAsync()
         {
             var invoices = await _context.Invoices
@@ -179,6 +194,33 @@ namespace ASM_1.Areas.Staff.Controllers
                 .ToList();
 
             return model;
+        }
+
+        private static object MapInvoiceDto(InvoiceSummaryViewModel invoice)
+        {
+            return new
+            {
+                id = invoice.InvoiceId,
+                code = invoice.InvoiceCode,
+                status = invoice.Status,
+                createdAt = invoice.CreatedDate,
+                finalAmount = invoice.FinalAmount,
+                isPrepaid = invoice.IsPrepaid,
+                items = invoice.Items.Select(MapLineItemDto).ToList()
+            };
+        }
+
+        private static object MapLineItemDto(OrderLineItemViewModel item)
+        {
+            return new
+            {
+                id = item.OrderItemId,
+                name = item.ItemName,
+                quantity = item.Quantity,
+                status = item.Status.ToString(),
+                note = item.Note,
+                options = item.Options
+            };
         }
     }
 }
