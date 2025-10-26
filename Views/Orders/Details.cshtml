@@ -1,4 +1,4 @@
-﻿@using ASM_1.Models.Food
+@using ASM_1.Models.Food
 @model OrderDetailsViewModel
 @{
     ViewData["Title"] = $"Đơn {Model.OrderCode}";
@@ -71,30 +71,6 @@
             <div class="order-note" data-role="order-note" style="display:none"></div>
         }
         <div class="order-total" data-role="order-total">Tổng cộng: @Model.TotalAmount.ToString("N0") VNĐ</div>
-        @if (Model.PaymentShares.Any())
-        {
-            <div class="order-share-breakdown" data-role="order-shares">
-                <h4><i class="fa-solid fa-receipt"></i> Chia hoá đơn</h4>
-                <ul>
-                    @foreach (var share in Model.PaymentShares)
-                    {
-                        <li>
-                            <span class="share-name">@(string.IsNullOrWhiteSpace(share.DisplayName) ? "Khách" : share.DisplayName)</span>
-                            <span class="share-method">@FormatShareMethod(share.PaymentMethod)</span>
-                            <span class="share-amount">@share.Amount.ToString("N0") VNĐ</span>
-                            @if (share.Percentage.HasValue && share.Percentage.Value > 0)
-                            {
-                                <span class="share-percent">(@share.Percentage.Value.ToString("0.#")%)</span>
-                            }
-                        </li>
-                    }
-                </ul>
-            </div>
-        }
-        else
-        {
-            <div class="order-share-breakdown" data-role="order-shares" style="display:none"></div>
-        }
     </div>
 
     <div class="order-items" data-role="order-items">
@@ -149,7 +125,6 @@
             const noteEl = page.querySelector('[data-role="order-note"]');
             const totalEl = page.querySelector('[data-role="order-total"]');
             const itemsEl = page.querySelector('[data-role="order-items"]');
-            const sharesEl = page.querySelector('[data-role="order-shares"]');
 
             const badgeText = (status) => ({
                 PENDING: 'Đang gửi',
@@ -179,11 +154,6 @@
                 const d = new Date(iso);
                 return d.toLocaleTimeString('vi-VN', { hour12: false }) + ' ' + d.toLocaleDateString('vi-VN');
             };
-            const shareMethodLabel = (method) => {
-                const lookup = { card: 'Thẻ', momo: 'MoMo', cash: 'Tiền mặt' };
-                const key = String(method || '').toLowerCase();
-                return lookup[key] || (method || '');
-            };
 
             function renderOrder(payload) {
                 if (!payload || !payload.order) return;
@@ -202,29 +172,6 @@
 
                 if (typeof data.total !== 'undefined' && totalEl) {
                     totalEl.textContent = `Tổng cộng: ${money(data.total)}`;
-                }
-
-                if (sharesEl) {
-                    const shares = Array.isArray(data.paymentShares) ? data.paymentShares : [];
-                    if (shares.length === 0) {
-                        sharesEl.style.display = 'none';
-                        sharesEl.innerHTML = '';
-                    } else {
-                        sharesEl.style.display = '';
-                        sharesEl.innerHTML = `
-                            <h4><i class="fa-solid fa-receipt"></i> Chia hoá đơn</h4>
-                            <ul>
-                                ${shares.map(share => {
-                                    const name = escapeHtml(share.name || 'Khách');
-                                    const method = escapeHtml(shareMethodLabel(share.method));
-                                    const amount = money(share.amount);
-                                    const percent = Number.isFinite(share.percentage) && share.percentage
-                                        ? `<span class="share-percent">(${Number(share.percentage).toFixed(1)}%)</span>`
-                                        : '';
-                                    return `<li><span class="share-name">${name}</span><span class="share-method">${method}</span><span class="share-amount">${amount}</span>${percent}</li>`;
-                                }).join('')}
-                            </ul>`;
-                    }
                 }
 
                 if (noteEl) {
@@ -316,14 +263,4 @@
             }
         })();
     </script>
-}
-
-@functions {
-    private static string FormatShareMethod(string? method) => method?.ToLowerInvariant() switch
-    {
-        "card" => "Thẻ",
-        "momo" => "MoMo",
-        "cash" => "Tiền mặt",
-        _ => string.IsNullOrWhiteSpace(method) ? "Khác" : method
-    };
 }

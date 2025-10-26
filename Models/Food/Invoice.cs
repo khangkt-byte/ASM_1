@@ -34,6 +34,5 @@ namespace ASM_1.Models.Food
         public ICollection<InvoiceDetail> InvoiceDetails { get; set; }
         public ICollection<TableInvoice> TableInvoices { get; set; }
         public ICollection<OrderItem> OrderItems { get; set; } = new List<OrderItem>();
-        public ICollection<InvoicePaymentShare> PaymentShares { get; set; } = new List<InvoicePaymentShare>();
     }
 }

@@ -13,7 +13,6 @@ namespace ASM_1.Models.Food
         public string? PaymentMethod { get; set; }
         public string? Note { get; set; }
         public List<OrderDetailsItemViewModel> Items { get; set; } = new();
-        public List<OrderPaymentShareViewModel> PaymentShares { get; set; } = new();
     }
 
     public class OrderDetailsItemViewModel
@@ -25,14 +24,5 @@ namespace ASM_1.Models.Food
         public decimal LineTotal { get; set; }
         public string? Note { get; set; }
         public List<string> Options { get; set; } = new();
-    }
-
-    public class OrderPaymentShareViewModel
-    {
-        public string ParticipantId { get; set; } = string.Empty;
-        public string? DisplayName { get; set; }
-        public string PaymentMethod { get; set; } = string.Empty;
-        public decimal Amount { get; set; }
-        public decimal? Percentage { get; set; }
     }
 }

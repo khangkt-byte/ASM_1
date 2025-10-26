@@ -5,7 +5,6 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using ASM_1.Data;
 using ASM_1.Models.Food;
-using ASM_1.Models.Payments;
 using ASM_1.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -110,7 +109,7 @@ namespace ASM_1.Controllers
 
         [HttpPost("{tableCode}/cart/place-order")]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> PlaceOrder(string tableCode, string? paymentMethod, string? splitInfo)
+        public async Task<IActionResult> PlaceOrder(string tableCode, string? paymentMethod)
         {
             var tableId = _tableCodeService.DecryptTableCode(tableCode);
             if (tableId == null)
@@ -144,40 +143,8 @@ namespace ASM_1.Controllers
             decimal shipping = 0m; // tuỳ chính sách giao/nhận
             var finalAmount = subtotal + shipping;
 
-            PaymentSplitRequest? splitRequest = null;
-            if (!string.IsNullOrWhiteSpace(splitInfo))
-            {
-                try
-                {
-                    splitRequest = JsonSerializer.Deserialize<PaymentSplitRequest>(splitInfo, JsonOptions);
-                }
-                catch
-                {
-                    splitRequest = null;
-                }
-            }
-
-            var splitResult = PaymentSplitCalculator.Compute(splitRequest, cart.CartItems, finalAmount, normalizedPayment);
-            bool isPrepaid = splitResult.AllPrepaid;
+            bool isPrepaid = normalizedPayment is "momo" or "zalopay" or "vnpay";
             var nowLocal = DateTime.Now;
-
-            string splitMode = Request.Form["splitMode"];
-            string splitPayloadRaw = Request.Form["splitPayload"];
-            var splitPayload = PaymentSplitService.DeserializePayload(splitPayloadRaw);
-            var splitResult = PaymentSplitService.CalculateSplit(splitMode, splitPayload, cart.CartItems, finalAmount);
-
-            bool invoiceRequested = string.Equals(Request.Form["invoiceRequest"], "on", StringComparison.OrdinalIgnoreCase)
-                || string.Equals(Request.Form["invoiceRequest"], "true", StringComparison.OrdinalIgnoreCase);
-
-            var invoiceRequest = PaymentSplitService.BuildInvoiceRequestInfo(
-                invoiceRequested,
-                Request.Form["invoiceCompanyName"],
-                Request.Form["invoiceTaxCode"],
-                Request.Form["invoiceEmail"],
-                Request.Form["invoiceAddress"],
-                Request.Form["invoiceNote"]);
-
-            var invoiceNote = PaymentSplitService.ComposeInvoiceNote(splitResult, invoiceRequest);
 
             using var tx = await _context.Database.BeginTransactionAsync();
             try
@@ -189,8 +156,7 @@ namespace ASM_1.Controllers
                     TotalAmount = finalAmount,
                     FinalAmount = finalAmount,
                     Status = isPrepaid ? "Paid" : "Pending",
-                    Notes = splitResult.DisplayLabel,
-                    IsPrepaid = isPrepaid
+                    Notes = null
                 };
                 _context.Invoices.Add(invoice);
                 await _context.SaveChangesAsync();
@@ -204,7 +170,7 @@ namespace ASM_1.Controllers
                     Status = OrderStatus.Pending,
                     Note = null,
                     TotalAmount = finalAmount,
-                    PaymentMethod = BuildOrderPaymentLabel(splitResult),
+                    PaymentMethod = normalizedPayment,
                     InvoiceId = invoice.InvoiceId,
                     CreatedAt = nowLocal,
                     UpdatedAt = nowLocal
@@ -255,48 +221,22 @@ namespace ASM_1.Controllers
                         }
                     }
 
-                    _context.InvoiceDetails.Add(new InvoiceDetail
+                    if (isPrepaid)
                     {
-                        InvoiceId = invoice.InvoiceId,
-                        FoodItemId = cartItem.ProductID,
-                        Quantity = cartItem.Quantity,
-                        UnitPrice = cartItem.UnitPrice,
-                        SubTotal = cartItem.UnitPrice * cartItem.Quantity
-                    });
+                        _context.InvoiceDetails.Add(new InvoiceDetail
+                        {
+                            InvoiceId = invoice.InvoiceId,
+                            FoodItemId = cartItem.ProductID,
+                            Quantity = cartItem.Quantity,
+                            UnitPrice = cartItem.UnitPrice,
+                            SubTotal = cartItem.UnitPrice * cartItem.Quantity
+                        });
+                    }
                 }
 
                 if (optionSnapshots.Count > 0)
                 {
                     _context.OrderItemOptions.AddRange(optionSnapshots);
-                }
-
-                if (splitResult.Shares.Count > 0)
-                {
-                    foreach (var share in splitResult.Shares)
-                    {
-                        string? meta = null;
-                        if (share.ItemQuantities != null && share.ItemQuantities.Count > 0)
-                        {
-                            meta = JsonSerializer.Serialize(new
-                            {
-                                items = share.ItemQuantities,
-                                share.ParticipantId
-                            }, JsonOptions);
-                        }
-
-                        _context.InvoicePaymentShares.Add(new InvoicePaymentShare
-                        {
-                            InvoiceId = invoice.InvoiceId,
-                            ParticipantId = share.ParticipantId,
-                            DisplayName = share.DisplayName,
-                            Amount = share.Amount,
-                            PaymentMethod = share.PaymentMethod,
-                            SplitMode = splitResult.Mode.ToString(),
-                            Percentage = share.Percentage,
-                            MetaJson = meta,
-                            CreatedAt = nowLocal
-                        });
-                    }
                 }
 
                 _context.CartItems.RemoveRange(cart.CartItems);
@@ -309,40 +249,9 @@ namespace ASM_1.Controllers
                 await _orderNotificationService.RefreshAndBroadcastAsync(order.OrderId);
 
                 TempData["OrderSuccess"] = true;
-                TempData["PaymentMethod"] = splitResult.DisplayLabel;
+                TempData["PaymentMethod"] = normalizedPayment;
                 TempData["TableName"] = order.TableNameSnapshot;
                 TempData["OrderCode"] = order.OrderCode;
-                TempData["PaymentShares"] = JsonSerializer.Serialize(splitResult.Shares.Select(s => new
-                {
-                    participantId = s.ParticipantId,
-                    name = s.DisplayName,
-                    amount = s.Amount,
-                    method = s.PaymentMethod,
-                    percentage = s.Percentage
-                }), JsonOptions);
-
-                if (!string.IsNullOrWhiteSpace(splitResult.Notes))
-                {
-                    TempData["PaymentSplitSummary"] = splitResult.Notes;
-                    TempData["PaymentSplitParticipants"] = JsonSerializer.Serialize(splitResult.Participants, new JsonSerializerOptions
-                    {
-                        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-                    });
-                    if (!string.IsNullOrWhiteSpace(splitResult.AdditionalNote))
-                    {
-                        TempData["PaymentSplitNote"] = splitResult.AdditionalNote;
-                    }
-                }
-
-                if (invoiceRequest?.IsRequested == true)
-                {
-                    TempData["InvoiceRequested"] = true;
-                    TempData["InvoiceCompany"] = invoiceRequest.CompanyName;
-                    TempData["InvoiceTaxCode"] = invoiceRequest.TaxCode;
-                    TempData["InvoiceEmail"] = invoiceRequest.Email;
-                    TempData["InvoiceAddress"] = invoiceRequest.Address;
-                    TempData["InvoiceNote"] = invoiceRequest.Note;
-                }
 
                 return RedirectToAction(nameof(Success), new { tableCode });
             }
@@ -438,17 +347,6 @@ namespace ASM_1.Controllers
             return Json(result);
         }
 
-        private static string BuildOrderPaymentLabel(PaymentSplitComputationResult result)
-        {
-            var label = result.DisplayLabel?.Trim();
-            if (string.IsNullOrWhiteSpace(label))
-            {
-                return "Thanh toán";
-            }
-
-            return label!.Length <= 40 ? label : label.Substring(0, 40);
-        }
-
         private static string NormalizePaymentMethod(string? method)
         {
             if (string.IsNullOrWhiteSpace(method))
@@ -456,14 +354,7 @@ namespace ASM_1.Controllers
                 return "cash";
             }
 
-            return method.Trim().ToLowerInvariant() switch
-            {
-                "cash" or "card" or "momo" => method.Trim().ToLowerInvariant(),
-                "cod" => "cash",
-                "zalopay" => "momo",
-                "vnpay" => "card",
-                _ => "cash"
-            };
+            return method.Trim().ToLowerInvariant();
         }
 
         private static string NewInvoiceCode()

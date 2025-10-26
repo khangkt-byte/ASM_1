@@ -1,58 +1,6 @@
-﻿@using System.Text.Json
-@using System.Text.Json.Serialization
-@{
+﻿@{
     ViewData["Title"] = "Đặt hàng thành công";
-    var shareJson = TempData["PaymentShares"] as string;
-    var shareOptions = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-    var shareSummaries = new List<SuccessShareSummary>();
-    if (!string.IsNullOrWhiteSpace(shareJson))
-    {
-        try
-        {
-            shareSummaries = JsonSerializer.Deserialize<List<SuccessShareSummary>>(shareJson!, shareOptions) ?? new();
-        }
-        catch
-        {
-            shareSummaries = new List<SuccessShareSummary>();
-        }
-    }
-
     var tableCode = Context.Session.GetString("CurrentTableCode");
-    var splitSummary = TempData["PaymentSplitSummary"] as string;
-    var splitNote = TempData["PaymentSplitNote"] as string;
-    var splitJson = TempData["PaymentSplitParticipants"] as string;
-    List<PaymentSplitDisplay>? splitParticipants = null;
-    if (!string.IsNullOrWhiteSpace(splitJson))
-    {
-        try
-        {
-            splitParticipants = JsonSerializer.Deserialize<List<PaymentSplitDisplay>>(splitJson!, new JsonSerializerOptions
-            {
-                PropertyNameCaseInsensitive = true
-            });
-        }
-        catch
-        {
-            splitParticipants = null;
-        }
-    }
-
-    var invoiceRequested = TempData["InvoiceRequested"] != null;
-    var invoiceCompany = TempData["InvoiceCompany"] as string;
-    var invoiceTax = TempData["InvoiceTaxCode"] as string;
-    var invoiceEmail = TempData["InvoiceEmail"] as string;
-    var invoiceAddress = TempData["InvoiceAddress"] as string;
-    var invoiceNote = TempData["InvoiceNote"] as string;
-}
-
-@functions {
-    private class PaymentSplitDisplay
-    {
-        public string? Name { get; set; }
-        public decimal Amount { get; set; }
-        public decimal? Percentage { get; set; }
-        public List<string>? Items { get; set; }
-    }
 }
 
 @section Styles {
@@ -103,61 +51,6 @@
                 padding-bottom: 10px;
             }
 
-        .payment-share-summary {
-            margin-top: 20px;
-            padding-top: 12px;
-            border-top: 1px solid #f0f0f0;
-        }
-
-            .payment-share-summary h4 {
-                font-size: 1.1rem;
-                margin-bottom: 12px;
-                color: #333;
-                display: flex;
-                gap: 8px;
-                align-items: center;
-            }
-
-            .payment-share-summary ul {
-                list-style: none;
-                padding: 0;
-                margin: 0;
-                display: flex;
-                flex-direction: column;
-                gap: 8px;
-            }
-
-            .payment-share-summary li {
-                display: flex;
-                justify-content: space-between;
-                align-items: baseline;
-                font-size: 0.95rem;
-                background: #f8f9fa;
-                padding: 10px 12px;
-                border-radius: 6px;
-            }
-
-                .payment-share-summary .share-name {
-                    font-weight: 600;
-                    color: #333;
-                }
-
-                .payment-share-summary .share-method {
-                    color: #555;
-                    font-size: 0.9rem;
-                }
-
-                .payment-share-summary .share-amount {
-                    font-weight: 600;
-                    color: #28a745;
-                }
-
-                .payment-share-summary .share-percent {
-                    color: #888;
-                    font-size: 0.85rem;
-                    margin-left: 6px;
-                }
-
             .order-info p {
                 margin: 12px 0;
                 color: #555;
@@ -168,23 +61,6 @@
                 color: #333;
                 font-weight: 600;
             }
-
-        .split-details {
-            background: #f8f9fa;
-            border-radius: 8px;
-            padding: 12px 15px;
-            margin-top: 10px;
-        }
-
-            .split-details li {
-                margin-bottom: 6px;
-            }
-
-        .invoice-section {
-            margin-top: 25px;
-            padding-top: 15px;
-            border-top: 1px dashed #e9ecef;
-        }
 
         .success-actions {
             margin-top: 40px;
@@ -212,21 +88,26 @@
             .btn-continue i {
                 margin-right: 8px;
             }
+
     </style>
 }
 
 <div class="success-page">
     <div class="container">
+        <!-- SUCCESS ICON -->
         <div class="success-icon">
             <i class="fas fa-check-circle"></i>
         </div>
 
+        <!-- SUCCESS TITLE -->
         <h1 class="success-title">Đặt hàng thành công!</h1>
 
+        <!-- SUCCESS MESSAGE -->
         <p class="success-message">
             Cảm ơn bạn đã đặt hàng tại FoodOrder. Chúng tôi hân hạnh được phục vụ bạn.
         </p>
 
+        <!-- ORDER INFO từ TempData -->
         <div class="order-info">
             <h3><i class="fas fa-receipt"></i> Thông tin đơn hàng</h3>
             <p><strong>Bàn:</strong> @TempData["TableName"]</p>
@@ -235,91 +116,21 @@
             {
                 <p><strong>Phương thức thanh toán:</strong> @TempData["PaymentMethod"]</p>
             }
-            @if (!string.IsNullOrWhiteSpace(splitSummary))
-            {
-                <div class="split-details">
-                    <p class="mb-1"><strong>Chia bill:</strong> @splitSummary</p>
-                    @if (!string.IsNullOrWhiteSpace(splitNote))
-                    {
-                        <p class="mb-1"><strong>Ghi chú:</strong> @splitNote</p>
-                    }
-                    @if (splitParticipants != null && splitParticipants.Any())
-                    {
-                        <ul class="mb-0">
-                            @foreach (var person in splitParticipants)
-                            {
-                                var amountText = string.Format(new System.Globalization.CultureInfo("vi-VN"), "{0:N0}₫", person.Amount);
-                                <li>
-                                    <strong>@(person.Name ?? "Khách"):</strong> @amountText
-                                    @if (person.Percentage.HasValue)
-                                    {
-                                        <span>(@person.Percentage.Value.ToString("0.#")%)</span>
-                                    }
-                                    @if (person.Items != null && person.Items.Any())
-                                    {
-                                        <div class="text-muted small">Món: @string.Join(", ", person.Items)</div>
-                                    }
-                                </li>
-                            }
-                        </ul>
-                    }
-                </div>
-            }
             @if (TempData["AppliedDiscount"] != null)
             {
                 <p><strong>Mã giảm giá:</strong> @TempData["AppliedDiscount"]</p>
             }
             <p><strong>Thời gian đặt:</strong> @DateTime.Now.ToString("dd/MM/yyyy HH:mm")</p>
-
-            @if (shareSummaries.Any())
-            {
-                <div class="payment-share-summary">
-                    <h4><i class="fas fa-users"></i> Chi tiết chia hoá đơn</h4>
-                    <ul>
-                        @foreach (var share in shareSummaries)
-                        {
-                            <li>
-                                <span class="share-name">@(string.IsNullOrWhiteSpace(share.Name) ? "Khách" : share.Name)</span>
-                                <span class="share-method">@MethodLabel(share.Method)</span>
-                                <span class="share-amount">@share.Amount.ToString("N0")₫</span>
-                                @if (share.Percentage.HasValue && share.Percentage.Value > 0)
-                                {
-                                    <span class="share-percent">(@share.Percentage.Value.ToString("0.#")%)</span>
-                                }
-                            </li>
-                        }
-                    </ul>
-                </div>
-            }
-
         </div>
 
+        <!-- ACTION BUTTONS -->
         <div class="success-actions">
             <a href="@Url.Action("Index", "Food", new { tableCode })" class="btn-continue">
                 <i class="fas fa-utensils"></i> Đặt món khác
             </a>
             <a href="@Url.Action("Index", "Food", new { tableCode })" class="btn-continue">
-                <i class="fas fa-clipboard-list"></i> Trạng thái đơn hàng
+                <i class="fas fa-utensils"></i> Trạng thái đơn hàng
             </a>
         </div>
     </div>
 </div>
-
-@functions {
-    private class SuccessShareSummary
-    {
-        public string? ParticipantId { get; set; }
-        public string? Name { get; set; }
-        public decimal Amount { get; set; }
-        public string? Method { get; set; }
-        public decimal? Percentage { get; set; }
-    }
-
-    private static string MethodLabel(string? method) => method?.ToLowerInvariant() switch
-    {
-        "card" => "Thẻ",
-        "momo" => "MoMo",
-        "cash" => "Tiền mặt",
-        _ => "Khác"
-    };
-}

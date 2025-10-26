@@ -66,14 +66,6 @@ namespace ASM_1.Controllers
                         lineTotal = i.LineTotal,
                         note = i.Note,
                         options = i.Options
-                    }),
-                    paymentShares = result.PaymentShares.Select(s => new
-                    {
-                        participantId = s.ParticipantId,
-                        name = s.DisplayName,
-                        method = s.PaymentMethod,
-                        amount = s.Amount,
-                        percentage = s.Percentage
                     })
                 }
             };
@@ -102,8 +94,6 @@ namespace ASM_1.Controllers
                     .ThenInclude(i => i.FoodItem)
                 .Include(o => o.Items)
                     .ThenInclude(i => i.Options)
-                .Include(o => o.Invoice)
-                    .ThenInclude(i => i.PaymentShares)
                 .Where(o =>
                     o.OrderId == id &&
                     o.TableId == tableId);
@@ -148,18 +138,7 @@ namespace ASM_1.Controllers
                             .Where(s => !string.IsNullOrWhiteSpace(s))
                             .ToList()
                     })
-                    .ToList(),
-                PaymentShares = order.Invoice?.PaymentShares
-                    ?.OrderBy(ps => ps.CreatedAt)
-                    .Select(ps => new OrderPaymentShareViewModel
-                    {
-                        ParticipantId = ps.ParticipantId,
-                        DisplayName = ps.DisplayName,
-                        PaymentMethod = ps.PaymentMethod,
-                        Amount = ps.Amount,
-                        Percentage = ps.Percentage
-                    })
-                    .ToList() ?? new List<OrderPaymentShareViewModel>()
+                    .ToList()
             };
         }
     }
