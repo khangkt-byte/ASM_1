@@ -56,7 +56,8 @@ namespace ASM_1.Services
             var tableCode = _tableCodeService.EncryptTableId(order.TableId);
 
             var summary = BuildSummary(order);
-            var detail = BuildDetail(order, tableCode);
+            var orderPayload = BuildOrderPayload(order, tableCode);
+            var detail = BuildDetail(orderPayload);
 
             await _hubContext.Clients
                 .Group($"table:{tableCode}")
@@ -69,7 +70,7 @@ namespace ASM_1.Services
             var staffPayload = new
             {
                 summary,
-                detail = detail.order,
+                detail = orderPayload,
                 isNewOrder
             };
 
@@ -97,41 +98,46 @@ namespace ASM_1.Services
             };
         }
 
-        private static object BuildDetail(Order order, string tableCode)
+        private static object BuildDetail(object orderPayload)
         {
             return new
             {
-                order = new
-                {
-                    id = order.OrderId,
-                    code = order.OrderCode,
-                    table = order.TableNameSnapshot,
-                    tableCode,
-                    placedAt = order.CreatedAt,
-                    updatedAt = order.UpdatedAt,
-                    status = order.Status.ToString(),
-                    total = order.TotalAmount,
-                    paymentMethod = order.PaymentMethod,
-                    note = order.Note,
-                    items = order.Items
-                        .OrderBy(i => i.CreatedAt)
-                        .Select(i => new
-                        {
-                            id = i.OrderItemId,
-                            name = i.FoodItem?.Name ?? "Món",
-                            quantity = i.Quantity,
-                            status = i.Status.ToString(),
-                            lineTotal = i.LineTotal,
-                            note = i.Note,
-                            options = i.Options
-                                .Select(o => !string.IsNullOrWhiteSpace(o.OptionValueNameSnap)
-                                    ? o.OptionValueNameSnap!
-                                    : o.OptionGroupNameSnap ?? string.Empty)
-                                .Where(s => !string.IsNullOrWhiteSpace(s))
-                                .ToList()
-                        })
-                        .ToList()
-                }
+                order = orderPayload
+            };
+        }
+
+        private static object BuildOrderPayload(Order order, string tableCode)
+        {
+            return new
+            {
+                id = order.OrderId,
+                code = order.OrderCode,
+                table = order.TableNameSnapshot,
+                tableCode,
+                placedAt = order.CreatedAt,
+                updatedAt = order.UpdatedAt,
+                status = order.Status.ToString(),
+                total = order.TotalAmount,
+                paymentMethod = order.PaymentMethod,
+                note = order.Note,
+                items = order.Items
+                    .OrderBy(i => i.CreatedAt)
+                    .Select(i => new
+                    {
+                        id = i.OrderItemId,
+                        name = i.FoodItem?.Name ?? "Món",
+                        quantity = i.Quantity,
+                        status = i.Status.ToString(),
+                        lineTotal = i.LineTotal,
+                        note = i.Note,
+                        options = i.Options
+                            .Select(o => !string.IsNullOrWhiteSpace(o.OptionValueNameSnap)
+                                ? o.OptionValueNameSnap!
+                                : o.OptionGroupNameSnap ?? string.Empty)
+                            .Where(s => !string.IsNullOrWhiteSpace(s))
+                            .ToList()
+                    })
+                    .ToList()
             };
         }
 
