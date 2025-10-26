@@ -17,7 +17,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     @RenderSection("Styles", required: false)
 </head>
-<body>
+<body data-table-code="@tableCode">
     <header>
         @if (TempData["SuccessMessage"] != null)
         {
@@ -492,6 +492,8 @@
 
     <!-- Scripts -->
     <script src="~/js/site.js" asp-append-version="true"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.7/signalr.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="~/js/order-notifications.js" asp-append-version="true"></script>
     <script src="~/js/mobile-menu.js" asp-append-version="true"></script>
     <script>
         document.addEventListener("DOMContentLoaded", function () {
