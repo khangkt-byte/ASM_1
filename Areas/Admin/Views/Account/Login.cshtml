@@ -11,15 +11,10 @@
     <div class="auth-form">
         <h2>Đăng nhập</h2>
 
-        @if (ViewBag.Error != null)
-        {
-            <div class="alert alert-danger">
-                <i class="fas fa-exclamation-circle"></i>
-                @ViewBag.Error
-            </div>
-        }
+        <div asp-validation-summary="All" class="alert alert-danger" role="alert"></div>
 
-        <form asp-controller="Account" asp-action="Login" method="post">
+        <form asp-area="Admin" asp-controller="Account" asp-action="Login" method="post">
+            @Html.AntiForgeryToken()
             <div class="form-group">
                 <label asp-for="UsernameOrEmail">Email hoặc tên đăng nhập <span style="color:orangered">*</span></label>
                 <input asp-for="UsernameOrEmail" class="form-control" required>
