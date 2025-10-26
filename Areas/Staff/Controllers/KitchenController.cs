@@ -1,5 +1,6 @@
 using ASM_1.Data;
 using ASM_1.Models.Food;
+using ASM_1.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -12,10 +13,12 @@ namespace ASM_1.Areas.Staff.Controllers
     public class KitchenController : Controller
     {
         private readonly ApplicationDbContext _context;
+        private readonly OrderNotificationService _orderNotificationService;
 
-        public KitchenController(ApplicationDbContext context)
+        public KitchenController(ApplicationDbContext context, OrderNotificationService orderNotificationService)
         {
             _context = context;
+            _orderNotificationService = orderNotificationService;
         }
 
         [HttpGet]
@@ -47,6 +50,7 @@ namespace ASM_1.Areas.Staff.Controllers
                 }
 
                 await _context.SaveChangesAsync();
+                await _orderNotificationService.RefreshAndBroadcastAsync(orderItem.OrderId);
             }
 
             return RedirectToAction(nameof(Index));
@@ -74,6 +78,7 @@ namespace ASM_1.Areas.Staff.Controllers
             }
 
             await _context.SaveChangesAsync();
+            await _orderNotificationService.RefreshAndBroadcastAsync(orderItem.OrderId);
             return RedirectToAction(nameof(Index));
         }
 

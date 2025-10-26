@@ -361,6 +361,7 @@
 </div>
 
 @section Scripts {
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.7/signalr.min.js"></script>
     <script>
         (() => {
           // ===== Tabs =====
@@ -403,12 +404,21 @@
             const dd = d.toLocaleDateString('vi-VN');
             return `${hh} ${dd}`;
           };
-          const badgeClass = s => `badge-pill badge-${(s||'').toUpperCase()}`;
           const badgeText = s => ({
             PENDING:'Đang gửi', CONFIRMED:'Đã xác nhận', IN_KITCHEN:'Đang chế biến',
             READY:'Sẵn sàng', SERVED:'Đã phục vụ', REQUESTED_BILL:'Yêu cầu tính tiền',
-            PAID:'Đã thanh toán', CANCELLED:'Đã huỷ'
+            PAID:'Đã thanh toán', CANCELLED:'Đã huỷ', CANCELED:'Đã huỷ'
           }[(s||'').toUpperCase()] || '—');
+          const badgeClass = s => {
+            const key = (s||'').toUpperCase();
+            if (key === 'CANCELED' || key === 'CANCELLED') return 'badge-pill badge-CANCELLED';
+            return `badge-pill badge-${key}`;
+          };
+          const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, ch => ({
+            '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+          })[ch] || ch);
+
+          let currentOrders = [];
 
           function renderList(items){
             if (!Array.isArray(items) || !items.length){
@@ -418,12 +428,12 @@
             }
             emptyEl.style.display = 'none';
             listEl.innerHTML = items.map(o => `
-              <a class="order-card" href="/orders/details/${o.id}" aria-label="Xem chi tiết ${o.code}">
+              <a class="order-card" href="/orders/details/${o.id}?tableCode=${encodeURIComponent(tableCode ?? '')}" aria-label="Xem chi tiết ${o.code}">
                 <div class="oc-left">
-                  <div class="oc-code">${o.code}</div>
+                  <div class="oc-code">${escapeHtml(o.code)}</div>
                   <div class="oc-mini">
-                    <span><i class="fa-regular fa-clock"></i> ${tstr(o.placedAt)}</span>
-                    <span><i class="fa-solid fa-chair"></i> ${o.table}</span>
+                    <span><i class="fa-regular fa-clock"></i> ${escapeHtml(tstr(o.placedAt))}</span>
+                    <span><i class="fa-solid fa-chair"></i> ${escapeHtml(o.table)}</span>
                   </div>
                 </div>
                 <div class="oc-right">
@@ -434,6 +444,24 @@
             `).join('');
           }
 
+          function setOrders(items){
+            currentOrders = Array.isArray(items) ? items.slice() : [];
+            currentOrders.sort((a, b) => new Date(b.placedAt).getTime() - new Date(a.placedAt).getTime());
+            renderList(currentOrders);
+          }
+
+          function upsertOrder(order){
+            if (!order || typeof order.id === 'undefined') return;
+            const idx = currentOrders.findIndex(o => o.id === order.id);
+            if (idx >= 0){
+              currentOrders[idx] = { ...currentOrders[idx], ...order };
+            } else {
+              currentOrders.unshift(order);
+            }
+            currentOrders.sort((a, b) => new Date(b.placedAt).getTime() - new Date(a.placedAt).getTime());
+            renderList(currentOrders);
+          }
+
           async function fetchOrders(){
             if (!tableCode){ renderList([]); return; }
             // Ưu tiên endpoint /cart/status/list?tableCode=...
@@ -441,14 +469,14 @@
               const res = await fetch(`/cart/status/list?tableCode=${encodeURIComponent(tableCode)}`, { cache:'no-store' });
               if (!res.ok) throw 0;
               const data = await res.json();
-              renderList(Array.isArray(data) ? data : []);
+              setOrders(Array.isArray(data) ? data : []);
             }catch{
               // Fallback: /cart/my-orders?tableCode=...
               try{
                 const r2 = await fetch(`/cart/my-orders?tableCode=${encodeURIComponent(tableCode)}`, { cache:'no-store' });
                 if (!r2.ok) throw 0;
                 const data2 = await r2.json();
-                renderList(Array.isArray(data2) ? data2 : []);
+                setOrders(Array.isArray(data2) ? data2 : []);
               }catch{
                 renderList([]);
               }
@@ -457,8 +485,55 @@
 
           // Poll khi ở tab “Trạng thái đơn”
           let timer = null;
-          function startOrdersPolling(){ stopOrdersPolling(); fetchOrders(); timer = setInterval(fetchOrders, 8000); }
-          function stopOrdersPolling(){ if (timer) { clearInterval(timer); timer = null; } }
+          let hubConnection = null;
+          let hubStarted = false;
+          function startOrdersPolling(){
+            stopOrdersPolling();
+            fetchOrders();
+            ensureHub();
+            timer = setInterval(fetchOrders, 20000);
+          }
+          function stopOrdersPolling(){
+            if (timer) { clearInterval(timer); timer = null; }
+            if (hubConnection && hubStarted){
+              hubConnection.stop().catch(() => {});
+              hubStarted = false;
+            }
+          }
+
+          function ensureHub(){
+            if (!tableCode || typeof signalR === 'undefined') return;
+            if (!hubConnection){
+              hubConnection = new signalR.HubConnectionBuilder()
+                .withUrl('/hubs/order-status')
+                .withAutomaticReconnect()
+                .build();
+
+              hubConnection.on('OrderUpdated', payload => {
+                if (!payload || typeof payload.id === 'undefined') return;
+                if (tableCode) {
+                  upsertOrder(payload);
+                }
+              });
+
+              hubConnection.onreconnected(() => {
+                if (tableCode) hubConnection.invoke('JoinTable', tableCode);
+              });
+
+              hubConnection.onclose(() => {
+                hubStarted = false;
+              });
+            }
+
+            if (!hubStarted){
+              hubConnection.start()
+                .then(() => {
+                  hubStarted = true;
+                  if (tableCode) hubConnection.invoke('JoinTable', tableCode);
+                })
+                .catch(err => console.error('SignalR', err));
+            }
+          }
 
           // Nếu tab-status đang active ngay khi vào trang
           const activeTab = document.querySelector('.cart-tabs .tab-btn.active')?.dataset.tab;

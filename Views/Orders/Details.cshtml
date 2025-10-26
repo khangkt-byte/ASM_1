@@ -1,0 +1,266 @@
+@using ASM_1.Models.Food
+@model OrderDetailsViewModel
+@{
+    ViewData["Title"] = $"Đơn {Model.OrderCode}";
+    string BadgeClass(OrderStatus status) => status switch
+    {
+        OrderStatus.Canceled => "badge-pill badge-CANCELLED",
+        _ => $"badge-pill badge-{status.ToString().ToUpperInvariant()}"
+    };
+
+    string BadgeText(OrderStatus status) => status switch
+    {
+        OrderStatus.Pending => "Đang gửi",
+        OrderStatus.Confirmed => "Đã xác nhận",
+        OrderStatus.In_Kitchen => "Đang chế biến",
+        OrderStatus.Ready => "Sẵn sàng",
+        OrderStatus.Served => "Đã phục vụ",
+        OrderStatus.Requested_Bill => "Yêu cầu tính tiền",
+        OrderStatus.Paid => "Đã thanh toán",
+        OrderStatus.Canceled => "Đã huỷ",
+        _ => status.ToString()
+    };
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/pages/order-details.css" asp-append-version="true" />
+}
+
+<div class="order-details-page"
+     data-order-id="@Model.OrderId"
+     data-table-code="@Model.TableCode">
+    <div class="order-details-header">
+        <a class="back-link" asp-controller="Cart" asp-action="Index" asp-route-tableCode="@Model.TableCode">
+            <i class="fa-solid fa-arrow-left"></i> Trở lại trạng thái đơn
+        </a>
+        <div class="order-code">@Model.OrderCode</div>
+    </div>
+
+    <div class="order-summary">
+        <div class="order-status-line">
+            <span class="status-label">Trạng thái:</span>
+            <span class="order-status @BadgeClass(Model.Status)" data-role="order-status">@BadgeText(Model.Status)</span>
+        </div>
+        <div class="order-meta">
+            <div>
+                <span class="meta-label">Bàn:</span>
+                <span data-role="order-table">@Model.TableName</span>
+            </div>
+            <div>
+                <span class="meta-label">Đặt lúc:</span>
+                <span data-role="order-created">@Model.CreatedAt.ToLocalTime().ToString("HH:mm dd/MM/yyyy")</span>
+            </div>
+            <div>
+                <span class="meta-label">Cập nhật:</span>
+                <span data-role="order-updated">@Model.UpdatedAt.ToLocalTime().ToString("HH:mm dd/MM/yyyy")</span>
+            </div>
+            <div>
+                <span class="meta-label">Thanh toán:</span>
+                <span data-role="order-payment">@(!string.IsNullOrWhiteSpace(Model.PaymentMethod) ? Model.PaymentMethod : "Chưa xác định")</span>
+            </div>
+        </div>
+        @if (!string.IsNullOrWhiteSpace(Model.Note))
+        {
+            <div class="order-note" data-role="order-note">
+                <i class="fa-regular fa-note-sticky"></i>
+                <span>@Model.Note</span>
+            </div>
+        }
+        else
+        {
+            <div class="order-note" data-role="order-note" style="display:none"></div>
+        }
+        <div class="order-total" data-role="order-total">Tổng cộng: @Model.TotalAmount.ToString("N0") VNĐ</div>
+    </div>
+
+    <div class="order-items" data-role="order-items">
+        @foreach (var item in Model.Items)
+        {
+            <div class="order-item" data-item-id="@item.OrderItemId">
+                <div class="item-header">
+                    <div>
+                        <div class="item-name">@item.Name</div>
+                        <div class="item-qty">Số lượng: @item.Quantity</div>
+                    </div>
+                    <div class="item-status">
+                        <span class="@BadgeClass(item.Status)">@BadgeText(item.Status)</span>
+                    </div>
+                </div>
+                <div class="item-body">
+                    <div class="item-price">@item.LineTotal.ToString("N0") VNĐ</div>
+                    @if (item.Options.Any())
+                    {
+                        <div class="item-options">
+                            <i class="fa-solid fa-list"></i>
+                            <span>@string.Join(", ", item.Options)</span>
+                        </div>
+                    }
+                    @if (!string.IsNullOrWhiteSpace(item.Note))
+                    {
+                        <div class="item-note">
+                            <i class="fa-regular fa-comment"></i>
+                            <span>@item.Note</span>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.7/signalr.min.js"></script>
+    <script>
+        (() => {
+            const page = document.querySelector('.order-details-page');
+            if (!page) return;
+
+            const orderId = Number(page.dataset.orderId);
+            const tableCode = page.dataset.tableCode;
+            const statusEl = page.querySelector('[data-role="order-status"]');
+            const tableEl = page.querySelector('[data-role="order-table"]');
+            const createdEl = page.querySelector('[data-role="order-created"]');
+            const updatedEl = page.querySelector('[data-role="order-updated"]');
+            const paymentEl = page.querySelector('[data-role="order-payment"]');
+            const noteEl = page.querySelector('[data-role="order-note"]');
+            const totalEl = page.querySelector('[data-role="order-total"]');
+            const itemsEl = page.querySelector('[data-role="order-items"]');
+
+            const badgeText = (status) => ({
+                PENDING: 'Đang gửi',
+                CONFIRMED: 'Đã xác nhận',
+                IN_KITCHEN: 'Đang chế biến',
+                READY: 'Sẵn sàng',
+                SERVED: 'Đã phục vụ',
+                REQUESTED_BILL: 'Yêu cầu tính tiền',
+                PAID: 'Đã thanh toán',
+                CANCELED: 'Đã huỷ',
+                CANCELLED: 'Đã huỷ'
+            })[status] || status || '';
+
+            const badgeClass = (status) => {
+                if (!status) return 'badge-pill';
+                if (status === 'CANCELED' || status === 'CANCELLED') {
+                    return 'badge-pill badge-CANCELLED';
+                }
+                return `badge-pill badge-${status}`;
+            };
+            const escapeHtml = (value) => String(value ?? '').replace(/[&<>"']/g, (ch) => ({
+                '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+            })[ch] || ch);
+            const money = (value) => (Number(value || 0)).toLocaleString('vi-VN') + ' VNĐ';
+            const formatTime = (iso) => {
+                if (!iso) return '';
+                const d = new Date(iso);
+                return d.toLocaleTimeString('vi-VN', { hour12: false }) + ' ' + d.toLocaleDateString('vi-VN');
+            };
+
+            function renderOrder(payload) {
+                if (!payload || !payload.order) return;
+                const data = payload.order;
+                const statusKey = (data.status || '').toUpperCase();
+
+                if (statusEl) {
+                    statusEl.className = `order-status ${badgeClass(statusKey)}`;
+                    statusEl.textContent = badgeText(statusKey);
+                }
+
+                if (tableEl) tableEl.textContent = data.table || '';
+                if (createdEl) createdEl.textContent = formatTime(data.placedAt);
+                if (updatedEl) updatedEl.textContent = formatTime(data.updatedAt);
+                if (paymentEl) paymentEl.textContent = data.paymentMethod || 'Chưa xác định';
+
+                if (typeof data.total !== 'undefined' && totalEl) {
+                    totalEl.textContent = `Tổng cộng: ${money(data.total)}`;
+                }
+
+                if (noteEl) {
+                    if (data.note) {
+                        noteEl.style.display = '';
+                        noteEl.innerHTML = `<i class="fa-regular fa-note-sticky"></i><span>${escapeHtml(data.note)}</span>`;
+                    } else {
+                        noteEl.style.display = 'none';
+                        noteEl.innerHTML = '';
+                    }
+                }
+
+                if (Array.isArray(data.items) && itemsEl) {
+                    itemsEl.innerHTML = data.items.map(item => {
+                        const itemStatus = (item.status || '').toUpperCase();
+                        const safeIdNumber = Number(item.id);
+                        const dataId = Number.isFinite(safeIdNumber) ? safeIdNumber : '';
+                        const optionsText = Array.isArray(item.options) && item.options.length
+                            ? `<div class="item-options"><i class="fa-solid fa-list"></i><span>${item.options.map(escapeHtml).join(', ')}</span></div>`
+                            : '';
+                        const noteText = item.note
+                            ? `<div class="item-note"><i class="fa-regular fa-comment"></i><span>${escapeHtml(item.note)}</span></div>`
+                            : '';
+
+                        return `
+                            <div class="order-item" data-item-id="${dataId}">
+                                <div class="item-header">
+                                    <div>
+                                        <div class="item-name">${escapeHtml(item.name || '')}</div>
+                                        <div class="item-qty">Số lượng: ${item.quantity ?? ''}</div>
+                                    </div>
+                                    <div class="item-status">
+                                        <span class="${badgeClass(itemStatus)}">${badgeText(itemStatus)}</span>
+                                    </div>
+                                </div>
+                                <div class="item-body">
+                                    <div class="item-price">${money(item.lineTotal)}</div>
+                                    ${optionsText}
+                                    ${noteText}
+                                </div>
+                            </div>`;
+                    }).join('');
+                }
+            }
+
+            async function fetchLatest() {
+                if (!tableCode) return;
+                try {
+                    const res = await fetch(`/orders/details/${orderId}/json?tableCode=${encodeURIComponent(tableCode)}`, { cache: 'no-store' });
+                    if (!res.ok) return;
+                    const data = await res.json();
+                    renderOrder(data);
+                } catch (err) {
+                    console.error('Không thể cập nhật đơn hàng', err);
+                }
+            }
+
+            fetchLatest();
+
+            if (typeof signalR !== 'undefined') {
+                const connection = new signalR.HubConnectionBuilder()
+                    .withUrl('/hubs/order-status')
+                    .withAutomaticReconnect()
+                    .build();
+
+                connection.on('OrderDetailsUpdated', (payload) => {
+                    if (!payload || !payload.order) return;
+                    if (Number(payload.order.id) !== orderId) return;
+                    renderOrder(payload);
+                });
+
+                connection.onreconnected(() => {
+                    if (tableCode) connection.invoke('JoinTable', tableCode);
+                    connection.invoke('JoinOrder', orderId);
+                    fetchLatest();
+                });
+
+                connection.onclose(() => {
+                    setTimeout(() => connection.start().then(() => {
+                        if (tableCode) connection.invoke('JoinTable', tableCode);
+                        connection.invoke('JoinOrder', orderId);
+                    }).catch(() => {}), 3000);
+                });
+
+                connection.start().then(() => {
+                    if (tableCode) connection.invoke('JoinTable', tableCode);
+                    connection.invoke('JoinOrder', orderId);
+                }).catch(err => console.error('SignalR', err));
+            }
+        })();
+    </script>
+}

@@ -1,5 +1,6 @@
 using ASM_1.Data;
 using ASM_1.Models.Food;
+using ASM_1.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -12,10 +13,12 @@ namespace ASM_1.Areas.Staff.Controllers
     public class CashierController : Controller
     {
         private readonly ApplicationDbContext _context;
+        private readonly OrderNotificationService _orderNotificationService;
 
-        public CashierController(ApplicationDbContext context)
+        public CashierController(ApplicationDbContext context, OrderNotificationService orderNotificationService)
         {
             _context = context;
+            _orderNotificationService = orderNotificationService;
         }
 
         [HttpGet]
@@ -46,6 +49,16 @@ namespace ASM_1.Areas.Staff.Controllers
             invoice.Status = "Served";
 
             await _context.SaveChangesAsync();
+
+            var orderIds = invoice.OrderItems
+                .Select(oi => oi.OrderId)
+                .Distinct()
+                .ToList();
+
+            foreach (var orderId in orderIds)
+            {
+                await _orderNotificationService.RefreshAndBroadcastAsync(orderId);
+            }
             return RedirectToAction(nameof(Index));
         }
 
@@ -70,6 +83,16 @@ namespace ASM_1.Areas.Staff.Controllers
             invoice.Status = "Paid";
 
             await _context.SaveChangesAsync();
+
+            var orderIds = invoice.OrderItems
+                .Select(oi => oi.OrderId)
+                .Distinct()
+                .ToList();
+
+            foreach (var orderId in orderIds)
+            {
+                await _orderNotificationService.RefreshAndBroadcastAsync(orderId);
+            }
             return RedirectToAction(nameof(Print), new { invoiceId });
         }
 

@@ -31,6 +31,7 @@
     <None Include="wwwroot\css\pages\sales-dashboard.css" />
     <None Include="wwwroot\css\pages\user-management.css" />
     <None Include="wwwroot\css\pages\user-profile.css" />
+    <None Include="wwwroot\css\pages\order-details.css" />
     <None Include="wwwroot\css\site.css" />
   </ItemGroup>
 
