@@ -286,16 +286,26 @@ namespace ASM_1.Controllers
                 .Take(20)
                 .Select(o => new
                 {
-                    id = o.OrderId,
-                    code = o.OrderCode,
-                    placedAt = o.CreatedAt,
-                    table = o.TableNameSnapshot,
-                    sum = o.TotalAmount,
-                    status = o.Status.ToString()
+                    o.OrderId,
+                    o.OrderCode,
+                    o.CreatedAt,
+                    o.TableNameSnapshot,
+                    o.TotalAmount,
+                    ItemStatuses = o.Items.Select(i => i.Status).ToList()
                 })
                 .ToListAsync();
 
-            return Json(orders);
+            var result = orders.Select(o => new
+            {
+                id = o.OrderId,
+                code = o.OrderCode,
+                placedAt = o.CreatedAt,
+                table = o.TableNameSnapshot,
+                sum = o.TotalAmount,
+                status = OrderStatusCalculator.CalculateFromStatuses(o.ItemStatuses).ToString()
+            });
+
+            return Json(result);
         }
 
         [HttpGet("cart/my-orders")]
@@ -315,16 +325,26 @@ namespace ASM_1.Controllers
                 .Take(20)
                 .Select(o => new
                 {
-                    id = o.OrderId,
-                    code = o.OrderCode,
-                    placedAt = o.CreatedAt,
-                    table = o.TableNameSnapshot,
-                    sum = o.TotalAmount,
-                    status = o.Status.ToString()
+                    o.OrderId,
+                    o.OrderCode,
+                    o.CreatedAt,
+                    o.TableNameSnapshot,
+                    o.TotalAmount,
+                    ItemStatuses = o.Items.Select(i => i.Status).ToList()
                 })
                 .ToListAsync();
 
-            return Json(orders);
+            var result = orders.Select(o => new
+            {
+                id = o.OrderId,
+                code = o.OrderCode,
+                placedAt = o.CreatedAt,
+                table = o.TableNameSnapshot,
+                sum = o.TotalAmount,
+                status = OrderStatusCalculator.CalculateFromStatuses(o.ItemStatuses).ToString()
+            });
+
+            return Json(result);
         }
 
         private static string NormalizePaymentMethod(string? method)
