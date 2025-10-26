@@ -16,7 +16,12 @@
         name = item.ProductName,
         quantity = item.Quantity,
         price = item.UnitPrice,
-        options = item.Options?.Select(o => new { group = o.OptionTypeName, name = o.OptionName }) ?? Array.Empty<object>()
+        options = item.Options == null
+            ? Array.Empty<object>()
+            : item.Options
+                .Select(o => new { group = o.OptionTypeName, name = o.OptionName })
+                .Cast<object>()
+                .ToArray()
     }) ?? Array.Empty<object>();
     var cartItemsJson = JsonSerializer.Serialize(cartPayload, new JsonSerializerOptions
     {
