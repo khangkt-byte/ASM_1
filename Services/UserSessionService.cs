@@ -1,4 +1,6 @@
-﻿namespace ASM_1.Services
+﻿using Microsoft.AspNetCore.Http;
+
+namespace ASM_1.Services
 {
     public class UserSessionService
     {
