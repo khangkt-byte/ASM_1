@@ -25,7 +25,7 @@ namespace ASM_1.Data
         public DbSet<InvoiceDetail> InvoiceDetails { get; set; }
         public DbSet<InvoiceDetailFoodOption> InvoiceDetailFoodOptions { get; set; }
         public DbSet<TableInvoice> TableInvoices { get; set; }
-        public DbSet<Order> Orders { get; set; }
+        //public DbSet<Order> Orders { get; set; }
         public DbSet<OrderItem> OrderItems { get; set; }
         public DbSet<OrderItemOption> OrderItemOptions { get; set; }
         public DbSet<Order> Orders { get; set; }
