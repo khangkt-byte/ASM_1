@@ -75,6 +75,16 @@ body {
     width: 90px;
 }
 
+.sidebar.sidebar--initial {
+    transition: none;
+}
+
+@media (min-width: 769px) {
+    .sidebar.sidebar--initial {
+        width: 270px;
+    }
+}
+
 .sidebar .sidebar-header {
     padding: 20px 18px;
     display: flex;
