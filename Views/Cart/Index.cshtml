@@ -5,8 +5,6 @@
     var subtotal = Model?.Sum(x => x.UnitPrice * x.Quantity) ?? 0m;
     var tableCode = Context.Session.GetString("CurrentTableCode");
     var hasItems = Model != null && Model.Any();
-    var dynamicLabel = ViewBag.DynamicPricingLabel as string;
-    var dynamicFactor = ViewBag.DynamicPriceFactor as decimal?;
 }
 
 @section Styles {
@@ -156,20 +154,6 @@
             </a>
         </div>
 
-        @if (dynamicFactor.HasValue)
-        {
-            <div class="alert alert-info d-flex align-items-center gap-2">
-                <i class="bi bi-lightning-charge-fill"></i>
-                <span>
-                    Giá động x@dynamicFactor.Value.ToString("0.##")
-                    @if (!string.IsNullOrWhiteSpace(dynamicLabel))
-                    {
-                        @($"- {dynamicLabel}")
-                    }
-                </span>
-            </div>
-        }
-
         <!-- TAB 1: Giỏ hàng -->
         <div id="tab-items" class="tab-content active">
             @if (hasItems)
@@ -212,10 +196,6 @@
                                                 <span class="option">Không có tùy chọn</span>
                                             }
                                             <span class="note">Ghi chú: @(string.IsNullOrWhiteSpace(item.Note) ? "Không có ghi chú" : item.Note)</span>
-                                            @if (item.AppliedDynamicFactor.HasValue)
-                                            {
-                                                <span class="badge bg-info text-dark ms-1">Giá động x@item.AppliedDynamicFactor.Value.ToString("0.##")</span>
-                                            }
                                         </div>
 
                                         <div class="item-price">
@@ -227,10 +207,6 @@
                                                     <span> · Tùy chọn: @item.OptionsTotal.ToString("N0")₫</span>
                                                 }
                                             </div>
-                                            @if (item.AppliedDynamicFactor.HasValue)
-                                            {
-                                                <div class="small text-info">Sau giá động x@item.AppliedDynamicFactor.Value.ToString("0.##")</div>
-                                            }
                                         </div>
                                     </div>
 

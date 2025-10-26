@@ -25,21 +25,6 @@
                 <span asp-validation-for="SeatCount" class="text-danger"></span>
             </div>
 
-            <div class="mb-3">
-                <label asp-for="DynamicPriceFactor" class="form-label">Hệ số giá động</label>
-                <input asp-for="DynamicPriceFactor" class="form-control" />
-            </div>
-
-            <div class="mb-3">
-                <label asp-for="DynamicPriceValidUntil" class="form-label">Hiệu lực đến</label>
-                <input asp-for="DynamicPriceValidUntil" type="datetime-local" class="form-control" />
-            </div>
-
-            <div class="mb-3">
-                <label asp-for="DynamicPriceLabel" class="form-label">Ghi chú giá động</label>
-                <input asp-for="DynamicPriceLabel" class="form-control" />
-            </div>
-
             <button type="submit" class="btn btn-primary">Cập nhật</button>
             <a asp-action="Index" class="btn btn-outline-secondary ms-2">Quay lại</a>
         </form>

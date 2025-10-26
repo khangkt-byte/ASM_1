@@ -22,8 +22,6 @@ namespace ASM_1.Models.Food
         public decimal UnitPrice { get; set; }
         [Column(TypeName = "decimal(18,2)")]
         public decimal TotalPrice { get; set; }
-        [Column(TypeName = "decimal(5,2)")]
-        public decimal? AppliedDynamicFactor { get; set; }
 
         public Cart? Cart { get; set; }
     }

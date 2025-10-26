@@ -42,7 +42,6 @@
                                 <th>Tên bàn</th>
                                 <th>Số ghế</th>
                                 <th>Trạng thái</th>
-                                <th>Giá động</th>
                                 <th>Thao tác</th>
                             </tr>
                         </thead>
@@ -57,20 +56,6 @@
                                     <td class="fw-semibold text-start">@table.TableName</td>
                                     <td>@table.SeatCount</td>
                                     <td class="@statusClass">@table.Status</td>
-                                    <td>
-                                        @if (table.DynamicPriceFactor.HasValue)
-                                        {
-                                            <span class="badge bg-info text-dark">x@table.DynamicPriceFactor.Value.ToString("0.##")</span>
-                                            if (!string.IsNullOrWhiteSpace(table.DynamicPriceLabel))
-                                            {
-                                                <div class="small text-muted">@table.DynamicPriceLabel</div>
-                                            }
-                                        }
-                                        else
-                                        {
-                                            <span class="text-muted">Không</span>
-                                        }
-                                    </td>
                                     <td>
                                         <div class="btn-group" role="group">
                                             <a asp-action="Details" asp-route-id="@table.TableId" class="btn btn-sm btn-outline-info">

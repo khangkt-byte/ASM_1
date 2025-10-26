@@ -43,43 +43,15 @@ namespace ASM_1.Controllers
             var sessionId = _userSessionService.GetOrCreateUserSessionId(tableCode);
             _tableTracker.AddGuest(table.TableId, sessionId);
 
-            var now = DateTime.UtcNow;
-            decimal? dynamicFactor = null;
-            string? dynamicLabel = null;
-            if (PricingHelper.TryGetDynamicFactor(table, now, out var factor, out var label))
-            {
-                dynamicFactor = factor;
-                dynamicLabel = label;
-            }
-
             var model = new MenuOverviewViewModel
             {
                 Categories = await _context.Categories.ToListAsync(),
                 Combos = await _context.Combos.Include(c => c.ComboDetails!).ThenInclude(cd => cd.FoodItem).ToListAsync(),
                 FoodItems = await _context.FoodItems.Include(f => f.Category).ToListAsync(),
-                DynamicPricingLabel = dynamicLabel,
-                DynamicPriceFactor = dynamicFactor,
                 TableName = table.TableName
             };
 
-            if (dynamicFactor.HasValue && dynamicFactor.Value > 0 && dynamicFactor.Value != 1m)
-            {
-                foreach (var food in model.FoodItems)
-                {
-                    var basePrice = PricingHelper.CalculateEffectiveBasePrice(food);
-                    model.FoodPriceOverrides[food.FoodItemId] = PricingHelper.ApplyDynamicFactor(basePrice, dynamicFactor);
-                }
-
-                foreach (var combo in model.Combos)
-                {
-                    var comboPrice = PricingHelper.CalculateComboPrice(combo);
-                    model.ComboPriceOverrides[combo.ComboId] = PricingHelper.ApplyDynamicFactor(comboPrice, dynamicFactor);
-                }
-            }
-
             HttpContext.Session.SetString("CurrentTableCode", tableCode);
-            ViewBag.DynamicPricingLabel = dynamicLabel;
-            ViewBag.DynamicPriceFactor = dynamicFactor;
             ViewBag.CurrentTableName = table.TableName;
 
             return View(model);
@@ -157,25 +129,14 @@ namespace ASM_1.Controllers
             })
             .ToList();
 
-            var table = _context.Tables.AsNoTracking().FirstOrDefault(b => b.TableId == tableId);
             decimal finalPrice = basePrice;
-            decimal? dynamicFactor = null;
-            string? dynamicLabel = null;
-            if (PricingHelper.TryGetDynamicFactor(table, DateTime.UtcNow, out var factor, out var label))
-            {
-                dynamicFactor = factor;
-                dynamicLabel = label;
-                finalPrice = PricingHelper.ApplyDynamicFactor(basePrice, dynamicFactor);
-            }
 
             var vm = new ProductDetailViewModel
             {
                 Item = item,
                 BasePriceEffective = basePrice,
                 FinalPrice = finalPrice,
-                Groups = groups,
-                DynamicPriceFactor = dynamicFactor,
-                DynamicPricingLabel = dynamicLabel
+                Groups = groups
             };
 
             return View(vm);

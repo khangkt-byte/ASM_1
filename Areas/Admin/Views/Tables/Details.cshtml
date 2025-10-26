@@ -3,7 +3,6 @@
 @{
     ViewData["Title"] = "Chi tiết bàn - " + Model.TableName;
     var mergeGroup = ViewBag.MergeGroup as ASM_1.Services.TableMergeGroupSnapshot;
-    var dynamicFactor = ViewBag.DynamicPriceFactor as decimal?;
 }
 
 <div class="container mt-4">
@@ -45,27 +44,6 @@
                                 else
                                 {
                                     <span class="badge bg-danger">Đầy</span>
-                                }
-                            </td>
-                        </tr>
-                        <tr>
-                            <th>Giá động:</th>
-                            <td>
-                                @if (dynamicFactor.HasValue)
-                                {
-                                    <span class="badge bg-info text-dark">x@dynamicFactor.Value.ToString("0.##")</span>
-                                    if (!string.IsNullOrWhiteSpace(ViewBag.DynamicPriceLabel as string))
-                                    {
-                                        <div class="small text-muted">@ViewBag.DynamicPriceLabel</div>
-                                    }
-                                    if (ViewBag.DynamicPriceValidUntil is DateTime until)
-                                    {
-                                        <div class="small text-muted">Hiệu lực đến: @until.ToString("dd/MM/yyyy HH:mm")</div>
-                                    }
-                                }
-                                else
-                                {
-                                    <span class="text-muted">Không áp dụng</span>
                                 }
                             </td>
                         </tr>

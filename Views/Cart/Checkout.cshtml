@@ -4,8 +4,6 @@
     var totalItems = Model?.Sum(x => x.Quantity) ?? 0;
     var subtotal = Model?.Sum(x => x.UnitPrice * x.Quantity) ?? 0;
     var tableCode = Context.Session.GetString("CurrentTableCode");
-    var dynamicLabel = ViewBag.DynamicPricingLabel as string;
-    var dynamicFactor = ViewBag.DynamicPriceFactor as decimal?;
     var lastDiscountCode = ViewBag.LastDiscountCode as string ?? string.Empty;
     var discountError = ViewBag.DiscountError as string;
 }
@@ -30,20 +28,6 @@
                 <span>Hoàn thành</span>
             </div>
         </div>
-
-        @if (dynamicFactor.HasValue)
-        {
-            <div class="alert alert-info d-flex align-items-center gap-2">
-                <i class="bi bi-lightning-charge-fill"></i>
-                <span>
-                    Giá động x@dynamicFactor.Value.ToString("0.##")
-                    @if (!string.IsNullOrWhiteSpace(dynamicLabel))
-                    {
-                        @($"- {dynamicLabel}")
-                    }
-                </span>
-            </div>
-        }
 
         <div class="checkout-content">
             <!-- Customer Information -->
