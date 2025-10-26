@@ -94,7 +94,7 @@ namespace ASM_1.Controllers
                     .ThenInclude(i => i.FoodItem)
                 .Include(o => o.Items)
                     .ThenInclude(i => i.Options)
-                .FirstOrDefaultAsync(o =>
+                .Where(o =>
                     o.OrderId == id &&
                     o.TableId == tableId &&
                     o.UserSessionId == sessionId);
