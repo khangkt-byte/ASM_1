@@ -2,6 +2,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const sidebar = document.querySelector('.admin-sidebar');
     const body = document.body;
     const sidebarToggleBtns = document.querySelectorAll('.sidebar-toggle');
+    const searchForm = document.querySelector('.search-form');
     const themeToggleBtn = document.querySelector('.theme-toggle');
     const themeIcon = themeToggleBtn ? themeToggleBtn.querySelector('.theme-icon') : null;
     const themeText = themeToggleBtn ? themeToggleBtn.querySelector('.theme-text') : null;
@@ -71,6 +72,19 @@ document.addEventListener('DOMContentLoaded', function () {
         });
 
         window.addEventListener('resize', ensureResponsiveState);
+
+        if (searchForm) {
+            searchForm.addEventListener('click', () => {
+                if (sidebar.classList.contains('collapsed')) {
+                    sidebar.classList.remove('collapsed');
+                    const searchInput = searchForm.querySelector('input');
+                    if (searchInput) {
+                        searchInput.focus();
+                    }
+                    updateThemeIndicators();
+                }
+            });
+        }
     }
 
     const highlightActiveLink = () => {

@@ -150,6 +150,55 @@ body.dark-theme {
     scrollbar-color: var(--color-text-placeholder) transparent;
 }
 
+.sidebar-content .search-form {
+    border-radius: 8px;
+    min-height: 48px;
+    margin: 5px 0 20px;
+    align-items: center;
+    display: flex;
+    padding: 0 15px;
+    white-space: nowrap;
+    background: var(--color-bg-secondary);
+    transition: 0.4s ease;
+}
+
+.sidebar-content .search-form span {
+    color: var(--color-text-placeholder);
+}
+
+.sidebar-content .search-form:focus-within {
+    background: var(--color-hover-secondary);
+}
+
+.sidebar.collapsed .search-form {
+    justify-content: center;
+    gap: 0;
+    padding: 12px;
+}
+
+.sidebar.collapsed .search-form:hover {
+    cursor: pointer;
+    background: var(--color-hover-secondary);
+}
+
+.sidebar.collapsed .search-form span {
+    margin: 0 auto;
+}
+
+.search-form input {
+    background: none;
+    outline: none;
+    border: none;
+    width: 100%;
+    margin-left: 15px;
+    font-size: 1rem;
+    color: var(--color-text-primary);
+}
+
+.search-form input::placeholder {
+    color: var(--color-text-placeholder);
+}
+
 .sidebar.collapsed .sidebar-content {
     scrollbar-width: none;
 }
@@ -413,6 +462,138 @@ body.dark-theme .theme-toggle-indicator {
 .admin-content {
     padding: 32px;
     flex: 1;
+}
+
+.user-dropdown {
+    position: relative;
+}
+
+.user-dropdown-toggle {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    border: none;
+    background: transparent;
+    color: var(--color-text-primary);
+    cursor: pointer;
+    padding: 8px 12px;
+    border-radius: 12px;
+    transition: background 0.3s ease;
+}
+
+.user-dropdown-toggle:hover,
+.user-dropdown-toggle:focus {
+    background: var(--color-bg-secondary);
+}
+
+.user-dropdown-toggle .user-avatar {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.user-dropdown-toggle .user-info {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+    text-align: left;
+}
+
+.user-dropdown-menu {
+    position: absolute;
+    top: calc(100% + 12px);
+    right: 0;
+    min-width: 240px;
+    background: var(--color-bg-sidebar);
+    border-radius: 16px;
+    padding: 16px;
+    box-shadow: 0 15px 45px rgba(15, 23, 42, 0.12);
+    border: 1px solid var(--color-border);
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-10px);
+    transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+.user-dropdown:hover .user-dropdown-menu,
+.user-dropdown:focus-within .user-dropdown-menu {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+.user-dropdown-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.user-dropdown-header strong {
+    font-size: 1rem;
+    color: var(--color-text-primary);
+}
+
+.user-dropdown-header span {
+    display: block;
+    font-size: 0.82rem;
+    color: var(--color-text-placeholder);
+}
+
+.dropdown-divider {
+    height: 1px;
+    background: var(--color-border);
+    margin: 12px 0;
+}
+
+.user-dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    color: var(--color-text-primary);
+    text-decoration: none;
+    font-size: 0.95rem;
+    margin: 0;
+    transition: background 0.2s ease, color 0.2s ease;
+}
+
+.user-dropdown-item i {
+    width: 18px;
+    text-align: center;
+}
+
+.user-dropdown-item:hover,
+.user-dropdown-item:focus {
+    background: var(--color-bg-secondary);
+}
+
+.user-dropdown-item.logout-item {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--color-border);
+}
+
+.user-dropdown-item.logout-item button {
+    background: none;
+    border: none;
+    color: inherit;
+    font: inherit;
+    padding: 0;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    cursor: pointer;
+    text-align: left;
+}
+
+.user-dropdown-item.logout-item button:hover,
+.user-dropdown-item.logout-item button:focus {
+    color: #ef4444;
 }
 
 /* Responsive adjustments */
