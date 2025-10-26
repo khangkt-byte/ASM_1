@@ -25,11 +25,14 @@ namespace ASM_1.Models.Food
         [StringLength(20)]
         public string Status { get; set; } = "Pending";
 
+        public bool IsPrepaid { get; set; }
+
         [StringLength(200)]
         public string? Notes { get; set; }
 
         // Navigation
         public ICollection<InvoiceDetail> InvoiceDetails { get; set; }
         public ICollection<TableInvoice> TableInvoices { get; set; }
+        public ICollection<OrderItem> OrderItems { get; set; } = new List<OrderItem>();
     }
 }

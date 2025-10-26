@@ -182,11 +182,12 @@ namespace ASM_1.Controllers
                 {
                     var oi = new OrderItem
                     {
-                        InvoiceId = invoice.InvoiceId,
+                        OrderId = order.OrderId,
                         FoodItemId = ci.ProductID,
                         Quantity = ci.Quantity,
                         UnitBasePrice = ci.BaseUnitPrice,
                         LineTotal = ci.UnitPrice * ci.Quantity,
+                        Status = OrderStatus.Pending,
                         Note = ci.Note,
                         CreatedAt = DateTime.UtcNow,
                         DynamicPriceFactor = ci.AppliedDynamicFactor
@@ -194,9 +195,23 @@ namespace ASM_1.Controllers
                     _context.OrderItems.Add(oi);
                     await _context.SaveChangesAsync();
 
-                    if (ci.Options != null && ci.Options.Count > 0)
+                    orderItemPairs.Add((oi, ci));
+                }
+
+                if (orderItemPairs.Count > 0)
+                {
+                    _context.OrderItems.AddRange(orderItemPairs.Select(p => p.orderItem));
+                    await _context.SaveChangesAsync();
+
+                    var optionSnapshots = new List<OrderItemOption>();
+                    foreach (var pair in orderItemPairs)
                     {
-                        foreach (var opt in ci.Options)
+                        if (pair.cartItem.Options == null || pair.cartItem.Options.Count == 0)
+                        {
+                            continue;
+                        }
+
+                        foreach (var opt in pair.cartItem.Options)
                         {
                             var oio = new OrderItemOption
                             {
@@ -245,7 +260,9 @@ namespace ASM_1.Controllers
                 }
 
                 _context.CartItems.RemoveRange(cart.CartItems);
+                cart.UpdatedAt = DateTime.UtcNow;
                 await _context.SaveChangesAsync();
+
                 await tx.CommitAsync();
 
                 TempData.Remove("LastDiscountCode");

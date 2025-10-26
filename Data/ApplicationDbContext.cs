@@ -27,6 +27,7 @@ namespace ASM_1.Data
         public DbSet<TableInvoice> TableInvoices { get; set; }
         public DbSet<OrderItem> OrderItems { get; set; }
         public DbSet<OrderItemOption> OrderItemOptions { get; set; }
+        public DbSet<Order> Orders { get; set; }
         public DbSet<OptionGroup> OptionGroups { get; set; }
         public DbSet<OptionValue> OptionValues { get; set; }
         public DbSet<MenuItemOptionGroup> MenuItemOptionGroups { get; set; }
@@ -186,7 +187,7 @@ namespace ASM_1.Data
             // ======================================================================
             builder.Entity<OrderItem>()
                 .HasOne(x => x.Invoice)
-                .WithMany()                                // không cần nav ngược trên Invoice
+                .WithMany(i => i.OrderItems)
                 .HasForeignKey(x => x.InvoiceId)
                 .OnDelete(DeleteBehavior.Cascade);
 
@@ -195,6 +196,26 @@ namespace ASM_1.Data
                 .WithMany()
                 .HasForeignKey(x => x.FoodItemId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<OrderItem>()
+                .HasOne(x => x.Order)
+                .WithMany(o => o.Items)
+                .HasForeignKey(x => x.OrderId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<Order>()
+                .HasIndex(o => o.OrderCode)
+                .IsUnique();
+
+            builder.Entity<Order>()
+                .Property(o => o.Status)
+                .HasMaxLength(30)
+                .HasDefaultValue(OrderStatus.Pending);
+
+            builder.Entity<Order>()
+                .Property(o => o.PaymentMethod)
+                .HasMaxLength(30)
+                .HasDefaultValue("cod");
 
             // ======================================================================
             // 12) OrderItemOption
@@ -220,6 +241,9 @@ namespace ASM_1.Data
                 .WithMany()
                 .HasForeignKey(x => x.OptionGroupId)
                 .OnDelete(DeleteBehavior.SetNull);
+            builder.Entity<Invoice>()
+                .Property(i => i.IsPrepaid)
+                .HasDefaultValue(false);
         }
     }
 }

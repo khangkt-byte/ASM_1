@@ -8,7 +8,7 @@ namespace ASM_1.Models.Food
         [Key] public int Id { get; set; }
 
         [Required] public int OrderItemId { get; set; }
-        public OrderItem OrderItem { get; set; } = default!;
+        public OrderItem? OrderItem { get; set; }
 
         // Luôn lưu OptionGroupId để in/ghi log rõ ràng:
         public int? OptionGroupId { get; set; }

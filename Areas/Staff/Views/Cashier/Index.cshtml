@@ -1,0 +1,141 @@
+@model CashierDashboardViewModel
+@{
+    ViewData["Title"] = "Quản lý đơn thu ngân";
+}
+
+<div class="container-fluid py-4">
+    <div class="d-flex align-items-center mb-4">
+        <i class="bi bi-cash-coin me-2 fs-3 text-success"></i>
+        <h1 class="h3 mb-0">Quản lý đơn hàng &amp; thanh toán</h1>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-secondary text-white">
+                    <h2 class="h5 mb-0">Đơn chờ bếp</h2>
+                </div>
+                <div class="card-body">
+                    @if (!Model.WaitingInvoices.Any())
+                    {
+                        <p class="text-muted mb-0">Không có đơn đang chờ.</p>
+                    }
+                    else
+                    {
+                        @foreach (var invoice in Model.WaitingInvoices)
+                        {
+                            <div class="border-bottom pb-3 mb-3">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <div class="fw-semibold">@invoice.InvoiceCode</div>
+                                        <div class="text-muted small">Tạo lúc: @invoice.CreatedDate.ToLocalTime().ToString("HH:mm dd/MM")</div>
+                                    </div>
+                                    <span class="badge bg-warning text-dark">@invoice.Status</span>
+                                </div>
+                                <ul class="list-unstyled small mt-2 mb-0">
+                                    @foreach (var item in invoice.Items)
+                                    {
+                                        <li>
+                                            <strong>@item.ItemName</strong> x@item.Quantity
+                                            <span class="text-muted">(@item.Status)</span>
+                                        </li>
+                                    }
+                                </ul>
+                            </div>
+                        }
+                    }
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-primary text-white">
+                    <h2 class="h5 mb-0">Sẵn sàng phục vụ</h2>
+                </div>
+                <div class="card-body">
+                    @if (!Model.ReadyInvoices.Any())
+                    {
+                        <p class="text-muted mb-0">Không có đơn nào đã hoàn tất.</p>
+                    }
+                    else
+                    {
+                        @foreach (var invoice in Model.ReadyInvoices)
+                        {
+                            <div class="border-bottom pb-3 mb-3">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <div class="fw-semibold">@invoice.InvoiceCode</div>
+                                        <div class="text-muted small">Tạo lúc: @invoice.CreatedDate.ToLocalTime().ToString("HH:mm dd/MM")</div>
+                                        @if (invoice.IsPrepaid)
+                                        {
+                                            <span class="badge bg-success-subtle text-success border border-success border-opacity-50">Đã trả trước</span>
+                                        }
+                                    </div>
+                                    <span class="badge bg-success">@invoice.Status</span>
+                                </div>
+                                <ul class="list-unstyled small mt-2">
+                                    @foreach (var item in invoice.Items)
+                                    {
+                                        <li>
+                                            <strong>@item.ItemName</strong> x@item.Quantity
+                                            @if (item.Options.Any())
+                                            {
+                                                <span class="text-muted">- @string.Join(", ", item.Options)</span>
+                                            }
+                                        </li>
+                                    }
+                                </ul>
+                                <div class="d-flex gap-2">
+                                    <form asp-action="MarkServed" method="post" class="d-inline">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="invoiceId" value="@invoice.InvoiceId" />
+                                        <button type="submit" class="btn btn-outline-primary btn-sm">Đã phục vụ</button>
+                                    </form>
+                                    <form asp-action="MarkPaid" method="post" class="d-inline">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="invoiceId" value="@invoice.InvoiceId" />
+                                        <button type="submit" class="btn btn-success btn-sm">Thanh toán &amp; in</button>
+                                    </form>
+                                </div>
+                            </div>
+                        }
+                    }
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-dark text-white">
+                    <h2 class="h5 mb-0">Đã thanh toán</h2>
+                </div>
+                <div class="card-body">
+                    @if (!Model.CompletedInvoices.Any())
+                    {
+                        <p class="text-muted mb-0">Chưa có hóa đơn đã thanh toán.</p>
+                    }
+                    else
+                    {
+                        @foreach (var invoice in Model.CompletedInvoices)
+                        {
+                            <div class="border-bottom pb-3 mb-3">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <div class="fw-semibold">@invoice.InvoiceCode</div>
+                                        <div class="text-muted small">Hoàn tất: @invoice.CreatedDate.ToLocalTime().ToString("HH:mm dd/MM")</div>
+                                    </div>
+                                    <span class="badge bg-success">Đã thanh toán</span>
+                                </div>
+                                <div class="mt-2 fw-semibold">Tổng: @invoice.FinalAmount.ToString("N0") đ</div>
+                                <a asp-action="Print" asp-route-invoiceId="@invoice.InvoiceId" class="btn btn-outline-secondary btn-sm mt-2">
+                                    <i class="bi bi-printer"></i> In lại hóa đơn
+                                </a>
+                            </div>
+                        }
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
