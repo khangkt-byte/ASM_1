@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using ASM_1.Data;
 using ASM_1.Models.Food;
 using ASM_1.Services;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -626,13 +627,6 @@ namespace ASM_1.Controllers
             }
 
             return new DiscountValidationResult(discount, discountValue, null);
-        }
-
-        private static string NewInvoiceCode()
-        {
-            var ts = DateTime.UtcNow.ToString("yyyyMMdd-HHmmss");
-            var rnd = Guid.NewGuid().ToString("N")[..3].ToUpperInvariant();
-            return $"INV-{ts}-{rnd}";
         }
 
         private record SelectionDto
