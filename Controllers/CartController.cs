@@ -354,7 +354,13 @@ namespace ASM_1.Controllers
                 return "cash";
             }
 
-            return method.Trim().ToLowerInvariant();
+            return method.Trim().ToLowerInvariant() switch
+            {
+                "card" or "pos" => "card",
+                "momo" => "momo",
+                "cash" or "counter" or "cashier" => "cash",
+                _ => "cash"
+            };
         }
 
         private static string NewInvoiceCode()

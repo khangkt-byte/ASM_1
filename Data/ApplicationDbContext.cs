@@ -29,6 +29,8 @@ namespace ASM_1.Data
         public DbSet<OrderItem> OrderItems { get; set; }
         public DbSet<OrderItemOption> OrderItemOptions { get; set; }
         public DbSet<Order> Orders { get; set; }
+        public DbSet<PaymentSession> PaymentSessions { get; set; }
+        public DbSet<PaymentShare> PaymentShares { get; set; }
         public DbSet<OptionGroup> OptionGroups { get; set; }
         public DbSet<OptionValue> OptionValues { get; set; }
         public DbSet<MenuItemOptionGroup> MenuItemOptionGroups { get; set; }
@@ -265,6 +267,30 @@ namespace ASM_1.Data
             builder.Entity<Invoice>()
                 .Property(i => i.IsPrepaid)
                 .HasDefaultValue(false);
+
+            builder.Entity<PaymentSession>()
+                .Property(p => p.SplitMode)
+                .HasConversion<string>()
+                .HasMaxLength(40);
+
+            builder.Entity<PaymentSession>()
+                .HasOne(p => p.Order)
+                .WithOne(o => o.PaymentSession)
+                .HasForeignKey<PaymentSession>(p => p.OrderId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<PaymentSession>()
+                .HasMany(p => p.Shares)
+                .WithOne(s => s.PaymentSession)
+                .HasForeignKey(s => s.PaymentSessionId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<PaymentShare>()
+                .Property(s => s.PaymentMethod)
+                .HasMaxLength(40);
+
+            builder.Entity<PaymentShare>()
+                .HasIndex(s => new { s.PaymentSessionId, s.UserSessionId });
         }
     }
 }
