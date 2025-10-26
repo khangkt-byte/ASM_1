@@ -1,4 +1,4 @@
-﻿using ASM_1.Models;
+using ASM_1.Models;
 using ASM_1.Models.Account;
 using ASM_1.Models.Food;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
@@ -25,6 +25,7 @@ namespace ASM_1.Data
         public DbSet<InvoiceDetail> InvoiceDetails { get; set; }
         public DbSet<InvoiceDetailFoodOption> InvoiceDetailFoodOptions { get; set; }
         public DbSet<TableInvoice> TableInvoices { get; set; }
+        public DbSet<Order> Orders { get; set; }
         public DbSet<OrderItem> OrderItems { get; set; }
         public DbSet<OrderItemOption> OrderItemOptions { get; set; }
         public DbSet<Order> Orders { get; set; }
@@ -183,11 +184,36 @@ namespace ASM_1.Data
                 .OnDelete(DeleteBehavior.Restrict);
 
             // ======================================================================
-            // 11) OrderItem
+            // 11) Order
+            // ======================================================================
+            builder.Entity<Order>()
+                .HasIndex(o => o.OrderCode)
+                .IsUnique();
+
+            builder.Entity<Order>()
+                .HasOne(o => o.Invoice)
+                .WithOne()
+                .HasForeignKey<Order>(o => o.InvoiceId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<Order>()
+                .HasOne(o => o.Table)
+                .WithMany()
+                .HasForeignKey(o => o.TableId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // ======================================================================
+            // 12) OrderItem
             // ======================================================================
             builder.Entity<OrderItem>()
+                .HasOne(x => x.Order)
+                .WithMany(o => o.Items)
+                .HasForeignKey(x => x.OrderId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<OrderItem>()
                 .HasOne(x => x.Invoice)
-                .WithMany(i => i.OrderItems)
+                .WithMany()
                 .HasForeignKey(x => x.InvoiceId)
                 .OnDelete(DeleteBehavior.Cascade);
 
@@ -218,7 +244,7 @@ namespace ASM_1.Data
                 .HasDefaultValue("cod");
 
             // ======================================================================
-            // 12) OrderItemOption
+            // 13) OrderItemOption
             // ======================================================================
             builder.Entity<OrderItemOption>()
                 .HasIndex(x => x.OrderItemId);

@@ -3,66 +3,45 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace ASM_1.Models.Food
 {
-    public static class OrderStatus
-    {
-        public const string Pending = "PENDING";
-        public const string Confirmed = "CONFIRMED";
-        public const string InKitchen = "IN_KITCHEN";
-        public const string Ready = "READY";
-        public const string Served = "SERVED";
-        public const string RequestedBill = "REQUESTED_BILL";
-        public const string Paid = "PAID";
-        public const string Cancelled = "CANCELLED";
-
-        public static IReadOnlyCollection<string> All { get; } = new[]
-        {
-            Pending,
-            Confirmed,
-            InKitchen,
-            Ready,
-            Served,
-            RequestedBill,
-            Paid,
-            Cancelled
-        };
-    }
+    public enum OrderStatus { Pending, Confirmed, In_Kitchen, Ready, Served, Requested_Bill, Paid, Canceled }
 
     public class Order
     {
         [Key]
         public int OrderId { get; set; }
 
-        [Required, StringLength(30)]
+        [Required, MaxLength(32)]
         public string OrderCode { get; set; } = string.Empty;
 
-        public int? TableId { get; set; }
+        [Required]
+        public int TableId { get; set; }
+        public Table? Table { get; set; }
 
-        [StringLength(20)]
-        public string? TableCode { get; set; }
+        [Required, MaxLength(120)]
+        public string TableNameSnapshot { get; set; } = string.Empty;
 
-        [StringLength(100)]
-        public string? TableName { get; set; }
+        [Required, MaxLength(80)]
+        public string UserSessionId { get; set; } = string.Empty;
 
-        [StringLength(120)]
-        public string? CustomerSessionId { get; set; }
-
-        [Required, StringLength(30)]
-        public string Status { get; set; } = OrderStatus.Pending;
-
-        [StringLength(30)]
-        public string PaymentMethod { get; set; } = "cod";
-
-        [Column(TypeName = "decimal(18,2)")]
-        public decimal SubTotal { get; set; }
-
-        [Column(TypeName = "decimal(18,2)")]
-        public decimal FinalAmount { get; set; }
+        [Required]
+        public OrderStatus Status { get; set; } = OrderStatus.Pending;
 
         public string? Note { get; set; }
 
-        public DateTime PlacedAt { get; set; } = DateTime.UtcNow;
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal TotalAmount { get; set; }
 
-        public Table? Table { get; set; }
+        [MaxLength(40)]
+        public string? PaymentMethod { get; set; }
+
+        public int InvoiceId { get; set; }
+        public Invoice Invoice { get; set; } = default!;
+
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+
+        [Timestamp]
+        public byte[]? RowVersion { get; set; }
 
         public ICollection<OrderItem> Items { get; set; } = new List<OrderItem>();
     }
