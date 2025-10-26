@@ -149,6 +149,42 @@ namespace ASM_1.Controllers
             using var tx = await _context.Database.BeginTransactionAsync();
             try
             {
+                var foodItemIds = cart.CartItems
+                    .Select(ci => ci.ProductID)
+                    .Distinct()
+                    .ToList();
+
+                var foodItems = await _context.FoodItems
+                    .Where(f => foodItemIds.Contains(f.FoodItemId))
+                    .ToDictionaryAsync(f => f.FoodItemId);
+
+                foreach (var cartItem in cart.CartItems)
+                {
+                    if (!foodItems.TryGetValue(cartItem.ProductID, out var food))
+                    {
+                        await tx.RollbackAsync();
+                        TempData["ErrorMessage"] = "Một món ăn trong giỏ đã không còn khả dụng.";
+                        return RedirectToAction(nameof(Index), new { tableCode });
+                    }
+
+                    if (!food.IsAvailable || food.StockQuantity < cartItem.Quantity)
+                    {
+                        await tx.RollbackAsync();
+                        var remaining = Math.Max(0, food.StockQuantity);
+                        TempData["ErrorMessage"] = remaining == 0
+                            ? $"Món \"{food.Name}\" đã hết hàng."
+                            : $"Món \"{food.Name}\" chỉ còn {remaining} suất.";
+                        return RedirectToAction(nameof(Index), new { tableCode });
+                    }
+
+                    food.StockQuantity -= cartItem.Quantity;
+                    if (food.StockQuantity <= 0)
+                    {
+                        food.StockQuantity = 0;
+                        food.IsAvailable = false;
+                    }
+                }
+
                 var invoice = new Invoice
                 {
                     InvoiceCode = NewInvoiceCode(),
@@ -388,14 +424,20 @@ namespace ASM_1.Controllers
             int quantity,
             string? note = null)
         {
-            quantity = Math.Clamp(quantity, 1, 10);
-
             var foodItem = await _context.FoodItems
                 .AsNoTracking()
                 .FirstOrDefaultAsync(f => f.FoodItemId == id);
 
             if (foodItem == null)
                 return NotFound();
+
+            if (!foodItem.IsAvailable || foodItem.StockQuantity <= 0)
+            {
+                TempData["ErrorMessage"] = "Món ăn đã hết hàng.";
+                return RedirectToAction(nameof(FoodController.Detail), "Food", new { tableCode, slug = foodItem.Slug });
+            }
+
+            quantity = Math.Clamp(quantity, 1, 10);
 
             var tableId = _tableCodeService.DecryptTableCode(tableCode);
             Table? table = null;
@@ -419,6 +461,23 @@ namespace ASM_1.Controllers
 
             string userId = _userSessionService.GetOrCreateUserSessionId(tableCode);
             var cart = await GetCartAsync(userId);
+
+            int existingQuantity = cart.CartItems.Where(ci => ci.ProductID == id).Sum(ci => ci.Quantity);
+            int remaining = foodItem.StockQuantity - existingQuantity;
+
+            if (remaining <= 0)
+            {
+                TempData["ErrorMessage"] = "Món ăn đã hết hàng.";
+                return RedirectToAction(nameof(FoodController.Detail), "Food", new { tableCode, slug = foodItem.Slug });
+            }
+
+            if (quantity > remaining)
+            {
+                TempData["ErrorMessage"] = remaining == 1
+                    ? "Chỉ còn 1 suất cho món ăn này."
+                    : $"Chỉ còn {remaining} suất cho món ăn này.";
+                return RedirectToAction(nameof(FoodController.Detail), "Food", new { tableCode, slug = foodItem.Slug });
+            }
 
             var normalizedNote = (note ?? string.Empty).Trim();
             var optionSignature = BuildOptionSignature(resolvedOptions);
