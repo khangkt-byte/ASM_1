@@ -328,42 +328,63 @@ function updateCartCount(addQuantity = 1) {
 // Sidebar toggle
 function toggleSidebar() {
     const sidebar = document.querySelector('.admin-sidebar');
-    const main = document.querySelector('.admin-main');
+
+    if (!sidebar) {
+        return;
+    }
 
     sidebar.classList.toggle('collapsed');
-    main.classList.toggle('expanded');
+
+    const themeIcon = document.querySelector('.theme-toggle .theme-icon');
+    const themeText = document.querySelector('.theme-toggle .theme-text');
+    if (themeIcon) {
+        const isDark = document.body.classList.contains('dark-theme');
+        const isCollapsed = sidebar.classList.contains('collapsed');
+        themeIcon.textContent = isCollapsed ? (isDark ? 'light_mode' : 'dark_mode') : 'dark_mode';
+        if (themeText) {
+            themeText.textContent = isDark ? 'Chế độ sáng' : 'Chế độ tối';
+        }
+    }
 }
 
 // Mobile sidebar toggle
 function toggleMobileSidebar() {
     const sidebar = document.querySelector('.admin-sidebar');
-    sidebar.classList.toggle('show');
+
+    if (!sidebar) {
+        return;
+    }
+
+    sidebar.classList.toggle('collapsed');
+
+    const themeIcon = document.querySelector('.theme-toggle .theme-icon');
+    const themeText = document.querySelector('.theme-toggle .theme-text');
+    if (themeIcon) {
+        const isDark = document.body.classList.contains('dark-theme');
+        const isCollapsed = sidebar.classList.contains('collapsed');
+        themeIcon.textContent = isCollapsed ? (isDark ? 'light_mode' : 'dark_mode') : 'dark_mode';
+        if (themeText) {
+            themeText.textContent = isDark ? 'Chế độ sáng' : 'Chế độ tối';
+        }
+    }
 }
 
 // Dashboard functions
 document.addEventListener('DOMContentLoaded', function () {
-    // Handle mobile menu
-    const menuToggle = document.querySelector('.menu-toggle');
-    if (menuToggle) {
-        menuToggle.addEventListener('click', function () {
-            if (window.innerWidth <= 768) {
-                toggleMobileSidebar();
-            } else {
-                toggleSidebar();
-            }
-        });
-    }
-
-    // Set active nav item based on current URL
     const currentPath = window.location.pathname;
     const navItems = document.querySelectorAll('.nav-item');
 
     navItems.forEach(item => {
-        if (item.getAttribute('href') === currentPath) {
+        const href = item.getAttribute('href');
+        if (!href) {
+            return;
+        }
+
+        const linkPath = new URL(href, window.location.origin).pathname;
+        if (currentPath === linkPath) {
             item.classList.add('active');
         }
     });
-
 });
 
 // Utility functions for admin

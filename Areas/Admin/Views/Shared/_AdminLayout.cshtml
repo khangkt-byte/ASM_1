@@ -1,21 +1,17 @@
-﻿@using Microsoft.AspNetCore.Identity
+@using Microsoft.AspNetCore.Identity
 @inject UserManager<ASM_1.Models.Account.AppUser> UserManager
 
 @{
-    var username = User?.Identity?.Name ?? "";
+    var username = User?.Identity?.Name ?? string.Empty;
     string userRole = string.Empty;
 
-    // Lấy user hiện tại
     var user = await UserManager.FindByNameAsync(username);
     if (user != null)
     {
-        // Lấy danh sách role của user
         var roles = await UserManager.GetRolesAsync(user);
-        // Nếu user chỉ có 1 role chính, lấy role đầu tiên
         userRole = roles.FirstOrDefault() ?? string.Empty;
     }
 
-    // Avatar
     var avatarClaim = User?.FindFirst("Avatar")?.Value;
     string userAvatar;
     if (string.IsNullOrWhiteSpace(avatarClaim))
@@ -37,7 +33,6 @@
     }
 }
 
-
 <!DOCTYPE html>
 <html lang="vi">
 <head>
@@ -49,6 +44,7 @@
     <link rel="stylesheet" href="~/css/admin-layout.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/pages/bs5grid.css" asp-append-version="true" />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
@@ -58,201 +54,217 @@
     @RenderSection("Styles", required: false)
 </head>
 <body class="admin-body">
-    <!-- Admin Sidebar -->
-    <aside class="admin-sidebar">
-        <div class="sidebar-header">
-            <div class="admin-logo">
-                <img src="~/Images/Food-logo.jpg" alt="Logo">
-                <span>Manage Panel</span>
-            </div>
-            <button class="sidebar-toggle" onclick="toggleSidebar()">
-                <i class="fas fa-bars"></i>
-            </button>
-        </div>
+    <nav class="site-nav">
+        <button class="sidebar-toggle" type="button">
+            <span class="material-symbols-rounded">menu</span>
+        </button>
+    </nav>
 
-        <nav class="sidebar-nav">
-            <!-- User Admin Menu - Hiển thị cho Admin và accountadmin -->
-            @if (user != null)
-            {
-                bool isAdmin = await UserManager.IsInRoleAsync(user, "Admin");
-                bool isAccountAdmin = await UserManager.IsInRoleAsync(user, "AccountAdmin");
-                bool isFoodAdmin = await UserManager.IsInRoleAsync(user, "FoodAdmin");
-
-                if (isAdmin || isAccountAdmin)
-                {
-                    <div class="nav-section">
-                        <span class="section-title">
-                            <i class="fas fa-user-cog"></i>
-                            Quản lý Tài khoản
-                        </span>
-                        <a asp-controller="Admin" asp-action="Index" class="nav-item">
-                            <i class="fas fa-tachometer-alt"></i>
-                            <span>Dashboard Tài khoản</span>
-                        </a>
-                        <a asp-controller="Admin" asp-action="ListUsers" class="nav-item">
-                            <i class="fas fa-users"></i>
-                            <span>Quản lý người dùng</span>
-                        </a>
-                        <a asp-controller="Admin" asp-action="ListRoles" class="nav-item">
-                            <i class="fas fa-user-shield"></i>
-                            <span>Quản lý vai trò</span>
-                        </a>
-                    </div>
-                }
-                bool isChef = await UserManager.IsInRoleAsync(user, "Chef");
-                bool isCashier = await UserManager.IsInRoleAsync(user, "Cashier");
-
-                if (isAdmin || isFoodAdmin)
-                {
-                    <div class="nav-section">
-                        <span class="section-title">
-                            <i class="fas fa-user-cog"></i>
-                            Quản lý Đồ ăn
-                        </span>
-                        <a asp-controller="Invoices" asp-action="Index" class="nav-item">
-                            <i class="fas fa-tachometer-alt"></i>
-                            <span>Hóa đơn</span>
-                        </a>
-                        <a asp-controller="Tables" asp-action="Index" class="nav-item">
-                            <i class="fas fa-tachometer-alt"></i>
-                            <span>Quản lý bàn ăn</span>
-                        </a>
-                        <a asp-controller="Categories" asp-action="Index" class="nav-item">
-                            <i class="fas fa-tachometer-alt"></i>
-                            <span>Quản lý danh mục món ăn</span>
-                        </a>
-                        <a asp-controller="FoodItems" asp-action="Index" class="nav-item">
-                            <i class="fas fa-users"></i>
-                            <span>Quản lý món ăn</span>
-                        </a>
-                        <a asp-controller="FoodOptions" asp-action="Index" class="nav-item">
-                            <i class="fas fa-user-shield"></i>
-                            <span>Quản lý tùy chọn món ăn</span>
-                        </a>
-                        <a asp-controller="Comboes" asp-action="Index" class="nav-item">
-                            <i class="fas fa-user-shield"></i>
-                            <span>Quản lý combo</span>
-                        </a>
-                        <a asp-controller="ComboDetails" asp-action="Index" class="nav-item">
-                            <i class="fas fa-user-shield"></i>
-                            <span>Quản lý chi tiết combo</span>
-                        </a>
-                        <a asp-controller="Discounts" asp-action="Index" class="nav-item">
-                            <i class="fas fa-user-shield"></i>
-                            <span>Quản lý giảm giá</span>
-                        </a>
-                    </div>
-                }
-
-                if (isChef)
-                {
-                    <div class="nav-section">
-                        <span class="section-title">
-                            <i class="fas fa-utensils"></i>
-                            Khu bếp
-                        </span>
-                        <a asp-area="Staff" asp-controller="Kitchen" asp-action="Index" class="nav-item">
-                            <i class="fas fa-fire"></i>
-                            <span>KDS - Đơn cần chế biến</span>
-                        </a>
-                    </div>
-                }
-
-                if (isCashier)
-                {
-                    <div class="nav-section">
-                        <span class="section-title">
-                            <i class="fas fa-cash-register"></i>
-                            Thu ngân
-                        </span>
-                        <a asp-area="Staff" asp-controller="Cashier" asp-action="Index" class="nav-item">
-                            <i class="fas fa-receipt"></i>
-                            <span>Quản lý đơn &amp; in hóa đơn</span>
-                        </a>
-                    </div>
-                }
-            }
-
-            <!-- Không hiển thị menu Food Admin cho Admin và accountadmin -->
-            <!-- Không hiển thị menu Hệ thống cho Admin và accountadmin nếu không cần -->
-        </nav>
-
-        <div class="sidebar-footer">
-            <div class="admin-profile">
-                <img src="@userAvatar" alt="Admin Avatar">
-                <div class="profile-info">
-                    <span class="admin-name">@username</span>
-                    <span class="admin-role">@userRole</span>
+    <div class="admin-container">
+        <aside class="sidebar admin-sidebar collapsed">
+            <div class="sidebar-header">
+                <div class="admin-logo">
+                    <img src="~/Images/Food-logo.jpg" alt="Logo" class="header-logo">
+                    <span>Manage Panel</span>
                 </div>
-            </div>
-        </div>
-    </aside>
-
-    <!-- Main Content -->
-    <main class="admin-main">
-        <!-- Top Header -->
-        <header class="admin-header">
-            <div class="header-left">
-                <button class="menu-toggle" onclick="toggleSidebar()">
-                    <i class="fas fa-bars"></i>
+                <button class="sidebar-toggle" type="button">
+                    <span class="material-symbols-rounded">chevron_left</span>
                 </button>
-                <div class="breadcrumb">
-                    <span>@ViewData["Title"]</span>
-                </div>
             </div>
 
-            <div class="header-right">
-                <button class="notification-btn">
-                    <i class="fas fa-bell"></i>
-                    <span class="notification-badge">5</span>
+            <div class="sidebar-content">
+                <ul class="menu-list">
+                    @if (user != null)
+                    {
+                        bool isAdmin = await UserManager.IsInRoleAsync(user, "Admin");
+                        bool isAccountAdmin = await UserManager.IsInRoleAsync(user, "AccountAdmin");
+                        bool isFoodAdmin = await UserManager.IsInRoleAsync(user, "FoodAdmin");
+                        bool isChef = await UserManager.IsInRoleAsync(user, "Chef");
+                        bool isCashier = await UserManager.IsInRoleAsync(user, "Cashier");
+
+                        if (isAdmin || isAccountAdmin)
+                        {
+                            <li class="menu-section">Quản lý Tài khoản</li>
+                            <li class="menu-item">
+                                <a asp-area="Admin" asp-controller="Admin" asp-action="Index" class="menu-link">
+                                    <span class="material-symbols-rounded">dashboard</span>
+                                    <span class="menu-label">Dashboard Tài khoản</span>
+                                </a>
+                            </li>
+                            <li class="menu-item">
+                                <a asp-area="Admin" asp-controller="Admin" asp-action="ListUsers" class="menu-link">
+                                    <span class="material-symbols-rounded">group</span>
+                                    <span class="menu-label">Quản lý người dùng</span>
+                                </a>
+                            </li>
+                            <li class="menu-item">
+                                <a asp-area="Admin" asp-controller="Admin" asp-action="ListRoles" class="menu-link">
+                                    <span class="material-symbols-rounded">supervisor_account</span>
+                                    <span class="menu-label">Quản lý vai trò</span>
+                                </a>
+                            </li>
+                        }
+
+                        if (isAdmin || isFoodAdmin)
+                        {
+                            <li class="menu-section">Quản lý Đồ ăn</li>
+                            <li class="menu-item">
+                                <a asp-area="Admin" asp-controller="Invoices" asp-action="Index" class="menu-link">
+                                    <span class="material-symbols-rounded">receipt_long</span>
+                                    <span class="menu-label">Hóa đơn</span>
+                                </a>
+                            </li>
+                            <li class="menu-item">
+                                <a asp-area="Admin" asp-controller="Tables" asp-action="Index" class="menu-link">
+                                    <span class="material-symbols-rounded">table_restaurant</span>
+                                    <span class="menu-label">Quản lý bàn ăn</span>
+                                </a>
+                            </li>
+                            <li class="menu-item">
+                                <a asp-area="Admin" asp-controller="Categories" asp-action="Index" class="menu-link">
+                                    <span class="material-symbols-rounded">category</span>
+                                    <span class="menu-label">Quản lý danh mục</span>
+                                </a>
+                            </li>
+                            <li class="menu-item">
+                                <a asp-area="Admin" asp-controller="FoodItems" asp-action="Index" class="menu-link">
+                                    <span class="material-symbols-rounded">restaurant</span>
+                                    <span class="menu-label">Quản lý món ăn</span>
+                                </a>
+                            </li>
+                            <li class="menu-item">
+                                <a asp-area="Admin" asp-controller="FoodOptions" asp-action="Index" class="menu-link">
+                                    <span class="material-symbols-rounded">tune</span>
+                                    <span class="menu-label">Quản lý tùy chọn món</span>
+                                </a>
+                            </li>
+                            <li class="menu-item">
+                                <a asp-area="Admin" asp-controller="Comboes" asp-action="Index" class="menu-link">
+                                    <span class="material-symbols-rounded">lunch_dining</span>
+                                    <span class="menu-label">Quản lý combo</span>
+                                </a>
+                            </li>
+                            <li class="menu-item">
+                                <a asp-area="Admin" asp-controller="ComboDetails" asp-action="Index" class="menu-link">
+                                    <span class="material-symbols-rounded">view_list</span>
+                                    <span class="menu-label">Quản lý chi tiết combo</span>
+                                </a>
+                            </li>
+                            <li class="menu-item">
+                                <a asp-area="Admin" asp-controller="Discounts" asp-action="Index" class="menu-link">
+                                    <span class="material-symbols-rounded">local_offer</span>
+                                    <span class="menu-label">Quản lý giảm giá</span>
+                                </a>
+                            </li>
+                        }
+
+                        if (isChef)
+                        {
+                            <li class="menu-section">Khu bếp</li>
+                            <li class="menu-item">
+                                <a asp-area="Staff" asp-controller="Kitchen" asp-action="Index" class="menu-link">
+                                    <span class="material-symbols-rounded">soup_kitchen</span>
+                                    <span class="menu-label">KDS - Đơn cần chế biến</span>
+                                </a>
+                            </li>
+                        }
+
+                        if (isCashier)
+                        {
+                            <li class="menu-section">Thu ngân</li>
+                            <li class="menu-item">
+                                <a asp-area="Staff" asp-controller="Cashier" asp-action="Index" class="menu-link">
+                                    <span class="material-symbols-rounded">point_of_sale</span>
+                                    <span class="menu-label">Quản lý đơn &amp; in hóa đơn</span>
+                                </a>
+                            </li>
+                        }
+                    }
+                </ul>
+            </div>
+
+            <div class="sidebar-footer">
+                <button class="theme-toggle" type="button">
+                    <div class="theme-label">
+                        <span class="theme-icon material-symbols-rounded">dark_mode</span>
+                        <span class="theme-text">Chế độ tối</span>
+                    </div>
+                    <div class="theme-toggle-track">
+                        <div class="theme-toggle-indicator"></div>
+                    </div>
                 </button>
 
-                <div class="user-dropdown">
-                    <button class="user-dropdown-toggle">
-                        <img src="@userAvatar" alt="Avatar" class="user-avatar">
-                        <div class="user-info">
-                            <span class="user-name">@username</span>
-                            <span class="user-role">@userRole</span>
-                        </div>
-                        <i class="fas fa-chevron-down"></i>
+                <div class="admin-profile">
+                    <img src="@userAvatar" alt="Admin Avatar">
+                    <div class="profile-info">
+                        <span class="admin-name">@username</span>
+                        <span class="admin-role">@userRole</span>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <div class="main-content admin-main">
+            <header class="admin-header">
+                <div class="header-left">
+                    <button class="sidebar-toggle" type="button">
+                        <span class="material-symbols-rounded">menu</span>
+                    </button>
+                    <div class="breadcrumb">
+                        <span>@ViewData["Title"]</span>
+                    </div>
+                </div>
+
+                <div class="header-right">
+                    <button class="notification-btn" type="button">
+                        <i class="fas fa-bell"></i>
+                        <span class="notification-badge">5</span>
                     </button>
 
-                    <div class="user-dropdown-menu">
-
-                        <div class="user-dropdown-header">
-                            @* <img src="@userAvatar" alt="Avatar"> *@
-                            <div>
-                                <strong>@username</strong>
-                                <span>@userRole</span>
+                    <div class="user-dropdown">
+                        <button class="user-dropdown-toggle" type="button">
+                            <img src="@userAvatar" alt="Avatar" class="user-avatar">
+                            <div class="user-info">
+                                <span class="user-name">@username</span>
+                                <span class="user-role">@userRole</span>
                             </div>
+                            <i class="fas fa-chevron-down"></i>
+                        </button>
+
+                        <div class="user-dropdown-menu">
+                            <div class="user-dropdown-header">
+                                <div>
+                                    <strong>@username</strong>
+                                    <span>@userRole</span>
+                                </div>
+                            </div>
+
+                            <div class="dropdown-divider"></div>
+
+                            <a href="#" class="user-dropdown-item">
+                                <i class="fas fa-user"></i>
+                                Hồ sơ
+                            </a>
+
+                            <a href="#" class="user-dropdown-item">
+                                <i class="fas fa-cog"></i>
+                                Cài đặt
+                            </a>
+
+                            <a asp-controller="Account" asp-action="Logout" method="post" class="user-dropdown-item logout-item">
+                                <i class="fas fa-sign-out-alt"></i>
+                                <span>Đăng xuất</span>
+                            </a>
                         </div>
-
-                        <div class="dropdown-divider"></div>
-
-                        <a href="#" class="user-dropdown-item">
-                            <i class="fas fa-user"></i>
-                            Hồ sơ
-                        </a>
-
-                        <a href="#" class="user-dropdown-item">
-                            <i class="fas fa-cog"></i>
-                            Cài đặt
-                        </a>
-
-                        <a asp-controller="Account" asp-action="Logout" method="post" class="user-dropdown-item logout-item">
-                            <i class="fas fa-sign-out-alt"></i>
-                            <span>Đăng xuất</span>
-                        </a>
                     </div>
                 </div>
-            </div>
-        </header>
+            </header>
 
-        <!-- Content Area -->
-        <div class="admin-content">
-            @RenderBody()
+            <div class="admin-content">
+                @RenderBody()
+            </div>
         </div>
-    </main>
+    </div>
 
     @RenderSection("Scripts", required: false)
 </body>
