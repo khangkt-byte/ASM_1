@@ -10,14 +10,15 @@ document.addEventListener('DOMContentLoaded', function () {
 
     const updateThemeIndicators = () => {
         const isCollapsed = sidebar ? sidebar.classList.contains('collapsed') : false;
-        body.classList.toggle('sidebar-open', !!sidebar && !isCollapsed);
+        const shouldLockScroll = !!sidebar && !isCollapsed && window.innerWidth <= 768;
+        body.classList.toggle('sidebar-open', shouldLockScroll);
 
         if (!themeIcon) {
             return;
         }
 
         const isDark = body.classList.contains('dark-theme');
-        themeIcon.textContent = isCollapsed ? (isDark ? 'light_mode' : 'dark_mode') : 'dark_mode';
+        themeIcon.textContent = isDark ? 'light_mode' : 'dark_mode';
 
         if (themeText) {
             themeText.textContent = isDark ? 'Chế độ sáng' : 'Chế độ tối';
@@ -109,7 +110,7 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 
 
-﻿// Dashboard Functions
+// Dashboard Functions
 function refreshDashboard() {
     showNotification('Đang làm mới dữ liệu...', 'info');
 

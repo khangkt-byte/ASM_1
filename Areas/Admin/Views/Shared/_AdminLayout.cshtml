@@ -62,7 +62,7 @@
         </button>
     </nav>
 
-    <div class="layout-container">
+    <div class="admin-container">
         <aside class="sidebar admin-sidebar collapsed">
             <div class="sidebar-header">
                 <div class="admin-logo">
@@ -186,6 +186,15 @@
                                 </a>
                             </li>
                         }
+                    }
+                    else
+                    {
+                        <li class="menu-item">
+                            <a asp-area="Admin" asp-controller="Account" asp-action="Login" class="menu-link">
+                                <span class="material-symbols-rounded" aria-hidden="true">login</span>
+                                <span class="menu-label">Đăng nhập</span>
+                            </a>
+                        </li>
                     }
                 </ul>
             </div>
