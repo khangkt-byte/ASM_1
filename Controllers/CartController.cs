@@ -201,17 +201,13 @@ namespace ASM_1.Controllers
 
                 var order = new Order
                 {
-                    OrderCode = NewOrderCode(),
-                    TableId = tableId,
-                    TableCode = tableCode,
-                    TableName = table?.TableName,
-                    CustomerSessionId = userId,
-                    Status = OrderStatus.Pending,
-                    PaymentMethod = normalizedPayment,
-                    SubTotal = subtotal,
-                    FinalAmount = finalAmount,
-                    Note = note,
-                    PlacedAt = DateTime.UtcNow
+                    InvoiceCode = NewInvoiceCode(),                // mã hóa đơn
+                    CreatedDate = nowLocal,
+                    TotalAmount = finalAmount,                    // tổng theo thời điểm đặt
+                    FinalAmount = finalAmount,                    // có thể áp mã giảm/fees sau
+                    Status = "Pending",
+                    IsPrepaid = isPrepaid,
+                    Notes = note
                 };
 
                 _context.Orders.Add(order);
@@ -227,6 +223,7 @@ namespace ASM_1.Controllers
                         Quantity = ci.Quantity,
                         UnitBasePrice = ci.UnitPrice,
                         LineTotal = ci.UnitPrice * ci.Quantity,
+                        Status = OrderStatus.Pending,
                         Note = ci.Note,
                         CreatedAt = DateTime.UtcNow
                     };

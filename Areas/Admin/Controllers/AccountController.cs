@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using System.Linq;
 
 namespace ASM_1.Areas.Admin.Controllers
 {
@@ -101,6 +102,23 @@ namespace ASM_1.Areas.Admin.Controllers
 
                     if (result.Succeeded)
                     {
+                        var roles = await _userManager.GetRolesAsync(user);
+
+                        if (roles.Contains("Admin") || roles.Contains("AccountAdmin") || roles.Contains("FoodAdmin"))
+                        {
+                            return RedirectToAction("Index", "Admin");
+                        }
+
+                        if (roles.Contains("Chef"))
+                        {
+                            return RedirectToAction("Index", "Kitchen", new { area = "Staff" });
+                        }
+
+                        if (roles.Contains("Cashier"))
+                        {
+                            return RedirectToAction("Index", "Cashier", new { area = "Staff" });
+                        }
+
                         return RedirectToAction("Index", "Admin");
                     }
                 }
