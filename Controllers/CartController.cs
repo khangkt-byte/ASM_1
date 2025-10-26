@@ -134,13 +134,15 @@ namespace ASM_1.Controllers
                     .ThenInclude(i => i.Options)
                 .FirstOrDefaultAsync(c => c.UserID == userId);
 
-            if (cart == null || cart.CartItems == null || !cart.CartItems.Any())
+            if (cart?.CartItems == null || !cart.CartItems.Any())
             {
                 TempData["ErrorMessage"] = "Giỏ hàng của bạn đang trống.";
                 return RedirectToAction(nameof(Index), new { tableCode });
             }
 
-            var subtotal = cart.CartItems.Sum(x => x.UnitPrice * x.Quantity);
+            var cartItems = cart.CartItems.ToList();
+
+            var subtotal = cartItems.Sum(x => x.UnitPrice * x.Quantity);
             decimal shipping = 0m; // tuỳ chính sách giao/nhận
             var finalAmount = subtotal + shipping;
 
@@ -157,14 +159,14 @@ namespace ASM_1.Controllers
                 }
             }
 
-            var splitComputation = PaymentSplitCalculator.Compute(splitRequest, cart.CartItems, finalAmount, normalizedPayment);
+            var splitComputation = PaymentSplitCalculator.Compute(splitRequest, cartItems, finalAmount, normalizedPayment);
             bool isPrepaid = splitComputation.AllPrepaid;
             var nowLocal = DateTime.Now;
 
             string splitMode = Request.Form["splitMode"];
             string splitPayloadRaw = Request.Form["splitPayload"];
             var splitPayload = PaymentSplitService.DeserializePayload(splitPayloadRaw);
-            var splitDisplay = PaymentSplitService.CalculateSplit(splitMode, splitPayload, cart.CartItems, finalAmount);
+            var splitDisplay = PaymentSplitService.CalculateSplit(splitMode, splitPayload, cartItems, finalAmount);
 
             bool invoiceRequested = string.Equals(Request.Form["invoiceRequest"], "on", StringComparison.OrdinalIgnoreCase)
                 || string.Equals(Request.Form["invoiceRequest"], "true", StringComparison.OrdinalIgnoreCase);
@@ -214,7 +216,7 @@ namespace ASM_1.Controllers
 
                 var createdItems = new List<(OrderItem OrderItem, CartItem CartItem)>();
 
-                foreach (var ci in cart.CartItems)
+                foreach (var ci in cartItems)
                 {
                     var orderItem = new OrderItem
                     {
@@ -299,7 +301,7 @@ namespace ASM_1.Controllers
                     }
                 }
 
-                _context.CartItems.RemoveRange(cart.CartItems);
+                _context.CartItems.RemoveRange(cartItems);
                 cart.UpdatedAt = DateTime.UtcNow;
 
                 await _context.SaveChangesAsync();
@@ -324,10 +326,12 @@ namespace ASM_1.Controllers
                 if (!string.IsNullOrWhiteSpace(splitDisplay.Notes))
                 {
                     TempData["PaymentSplitSummary"] = splitDisplay.Notes;
-                    TempData["PaymentSplitParticipants"] = JsonSerializer.Serialize(splitDisplay.Participants, new JsonSerializerOptions
-                    {
-                        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-                    });
+                    TempData["PaymentSplitParticipants"] = JsonSerializer.Serialize(
+                        splitDisplay.Participants,
+                        new JsonSerializerOptions
+                        {
+                            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+                        });
                     if (!string.IsNullOrWhiteSpace(splitDisplay.AdditionalNote))
                     {
                         TempData["PaymentSplitNote"] = splitDisplay.AdditionalNote;
