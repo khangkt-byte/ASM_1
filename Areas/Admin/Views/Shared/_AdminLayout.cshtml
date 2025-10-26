@@ -552,10 +552,13 @@
                         <span class="admin-profile-role">@userRole</span>
                     </div>
                 </div>
-                <a asp-controller="Account" asp-action="Logout" class="admin-sidebar-button admin-logout-button">
-                    <span class="material-symbols-rounded">logout</span>
-                    <span class="admin-theme-text">Đăng xuất</span>
-                </a>
+                <form asp-area="Admin" asp-controller="Account" asp-action="Logout" method="post" class="admin-logout-form" style="display: contents;">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="admin-sidebar-button admin-logout-button">
+                        <span class="material-symbols-rounded">logout</span>
+                        <span class="admin-theme-text">Đăng xuất</span>
+                    </button>
+                </form>
             </div>
         </aside>
 

@@ -186,10 +186,13 @@
 
                                     <div class="user-dropdown-divider"></div>
 
-                                    <a asp-area="Admin" asp-controller="Account" asp-action="Logout" class="user-dropdown-item logout-item">
-                                        <i class="fas fa-sign-out-alt"></i>
-                                        <span>Đăng xuất</span>
-                                    </a>
+                                    <form asp-area="Admin" asp-controller="Account" asp-action="Logout" method="post" class="logout-form" style="display: contents;">
+                                        @Html.AntiForgeryToken()
+                                        <button type="submit" class="user-dropdown-item logout-item">
+                                            <i class="fas fa-sign-out-alt"></i>
+                                            <span>Đăng xuất</span>
+                                        </button>
+                                    </form>
                                 </div>
                             </div>
                         }
@@ -241,10 +244,13 @@
                             <i class="fas fa-user"></i>
                             <span>Hồ sơ</span>
                         </a>
-                        <a asp-controller="Account" asp-action="Logout" class="mobile-user-btn logout">
-                            <i class="fas fa-sign-out-alt"></i>
-                            <span>Đăng xuất</span>
-                        </a>
+                        <form asp-area="Admin" asp-controller="Account" asp-action="Logout" method="post" class="mobile-logout-form" style="display: contents;">
+                            @Html.AntiForgeryToken()
+                            <button type="submit" class="mobile-user-btn logout">
+                                <i class="fas fa-sign-out-alt"></i>
+                                <span>Đăng xuất</span>
+                            </button>
+                        </form>
                     </div>
                 </div>
             }
