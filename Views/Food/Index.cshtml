@@ -195,6 +195,10 @@
                         <div class="food-card" data-category="@food.CategoryId">
                             <div class="food-image">
                                 <img src="@Url.Content(food.ImageUrl)" alt="@food.Name" class="menu-item-image">
+                                @if (!food.IsAvailable || food.StockQuantity <= 0)
+                                {
+                                    <span class="stock-badge">Hết hàng</span>
+                                }
                                 @if (food.DiscountPercent > 0)
                                 {
                                     <div class="discount-badge">-@food.DiscountPercent%</div>
