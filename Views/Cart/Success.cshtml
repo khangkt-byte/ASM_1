@@ -1,6 +1,43 @@
-﻿@{
+﻿@using System.Collections.Generic
+@using System.Text.Json
+@{
     ViewData["Title"] = "Đặt hàng thành công";
     var tableCode = Context.Session.GetString("CurrentTableCode");
+    var splitSummary = TempData["PaymentSplitSummary"] as string;
+    var splitNote = TempData["PaymentSplitNote"] as string;
+    var splitJson = TempData["PaymentSplitParticipants"] as string;
+    List<PaymentSplitDisplay>? splitParticipants = null;
+    if (!string.IsNullOrWhiteSpace(splitJson))
+    {
+        try
+        {
+            splitParticipants = JsonSerializer.Deserialize<List<PaymentSplitDisplay>>(splitJson!, new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            });
+        }
+        catch
+        {
+            splitParticipants = null;
+        }
+    }
+
+    var invoiceRequested = TempData["InvoiceRequested"] != null;
+    var invoiceCompany = TempData["InvoiceCompany"] as string;
+    var invoiceTax = TempData["InvoiceTaxCode"] as string;
+    var invoiceEmail = TempData["InvoiceEmail"] as string;
+    var invoiceAddress = TempData["InvoiceAddress"] as string;
+    var invoiceNote = TempData["InvoiceNote"] as string;
+}
+
+@functions {
+    private class PaymentSplitDisplay
+    {
+        public string? Name { get; set; }
+        public decimal Amount { get; set; }
+        public decimal? Percentage { get; set; }
+        public List<string>? Items { get; set; }
+    }
 }
 
 @section Styles {
@@ -62,6 +99,23 @@
                 font-weight: 600;
             }
 
+        .split-details {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 12px 15px;
+            margin-top: 10px;
+        }
+
+            .split-details li {
+                margin-bottom: 6px;
+            }
+
+        .invoice-section {
+            margin-top: 25px;
+            padding-top: 15px;
+            border-top: 1px dashed #e9ecef;
+        }
+
         .success-actions {
             margin-top: 40px;
         }
@@ -88,26 +142,21 @@
             .btn-continue i {
                 margin-right: 8px;
             }
-
     </style>
 }
 
 <div class="success-page">
     <div class="container">
-        <!-- SUCCESS ICON -->
         <div class="success-icon">
             <i class="fas fa-check-circle"></i>
         </div>
 
-        <!-- SUCCESS TITLE -->
         <h1 class="success-title">Đặt hàng thành công!</h1>
 
-        <!-- SUCCESS MESSAGE -->
         <p class="success-message">
             Cảm ơn bạn đã đặt hàng tại FoodOrder. Chúng tôi hân hạnh được phục vụ bạn.
         </p>
 
-        <!-- ORDER INFO từ TempData -->
         <div class="order-info">
             <h3><i class="fas fa-receipt"></i> Thông tin đơn hàng</h3>
             <p><strong>Bàn:</strong> @TempData["TableName"]</p>
@@ -116,20 +165,78 @@
             {
                 <p><strong>Phương thức thanh toán:</strong> @TempData["PaymentMethod"]</p>
             }
+            @if (!string.IsNullOrWhiteSpace(splitSummary))
+            {
+                <div class="split-details">
+                    <p class="mb-1"><strong>Chia bill:</strong> @splitSummary</p>
+                    @if (!string.IsNullOrWhiteSpace(splitNote))
+                    {
+                        <p class="mb-1"><strong>Ghi chú:</strong> @splitNote</p>
+                    }
+                    @if (splitParticipants != null && splitParticipants.Any())
+                    {
+                        <ul class="mb-0">
+                            @foreach (var person in splitParticipants)
+                            {
+                                var amountText = string.Format(new System.Globalization.CultureInfo("vi-VN"), "{0:N0}₫", person.Amount);
+                                <li>
+                                    <strong>@(person.Name ?? "Khách"):</strong> @amountText
+                                    @if (person.Percentage.HasValue)
+                                    {
+                                        <span>(@person.Percentage.Value.ToString("0.#")%)</span>
+                                    }
+                                    @if (person.Items != null && person.Items.Any())
+                                    {
+                                        <div class="text-muted small">Món: @string.Join(", ", person.Items)</div>
+                                    }
+                                </li>
+                            }
+                        </ul>
+                    }
+                </div>
+            }
             @if (TempData["AppliedDiscount"] != null)
             {
                 <p><strong>Mã giảm giá:</strong> @TempData["AppliedDiscount"]</p>
             }
             <p><strong>Thời gian đặt:</strong> @DateTime.Now.ToString("dd/MM/yyyy HH:mm")</p>
+
+            @if (invoiceRequested)
+            {
+                <div class="invoice-section">
+                    <h4><i class="fas fa-file-invoice"></i> Thông tin hóa đơn</h4>
+                    <ul class="list-unstyled mb-0">
+                        @if (!string.IsNullOrWhiteSpace(invoiceCompany))
+                        {
+                            <li><strong>Đơn vị:</strong> @invoiceCompany</li>
+                        }
+                        @if (!string.IsNullOrWhiteSpace(invoiceTax))
+                        {
+                            <li><strong>Mã số thuế:</strong> @invoiceTax</li>
+                        }
+                        @if (!string.IsNullOrWhiteSpace(invoiceEmail))
+                        {
+                            <li><strong>Email:</strong> @invoiceEmail</li>
+                        }
+                        @if (!string.IsNullOrWhiteSpace(invoiceAddress))
+                        {
+                            <li><strong>Địa chỉ:</strong> @invoiceAddress</li>
+                        }
+                        @if (!string.IsNullOrWhiteSpace(invoiceNote))
+                        {
+                            <li><strong>Ghi chú:</strong> @invoiceNote</li>
+                        }
+                    </ul>
+                </div>
+            }
         </div>
 
-        <!-- ACTION BUTTONS -->
         <div class="success-actions">
             <a href="@Url.Action("Index", "Food", new { tableCode })" class="btn-continue">
                 <i class="fas fa-utensils"></i> Đặt món khác
             </a>
             <a href="@Url.Action("Index", "Food", new { tableCode })" class="btn-continue">
-                <i class="fas fa-utensils"></i> Trạng thái đơn hàng
+                <i class="fas fa-clipboard-list"></i> Trạng thái đơn hàng
             </a>
         </div>
     </div>
