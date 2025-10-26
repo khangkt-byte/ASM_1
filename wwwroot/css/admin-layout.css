@@ -207,6 +207,20 @@ body.dark-theme {
     pointer-events: none;
 }
 
+.sidebar.collapsed .menu-item {
+    justify-content: center;
+}
+
+.sidebar.collapsed .menu-link {
+    justify-content: center;
+    gap: 0;
+    padding: 12px;
+}
+
+.sidebar.collapsed .menu-link .material-symbols-rounded {
+    margin: 0 auto;
+}
+
 .menu-link:is(:hover, .active) {
     color: #fff;
     background: var(--color-hover-primary);
