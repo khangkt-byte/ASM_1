@@ -5,6 +5,8 @@
     ViewData["Title"] = "Chi tiết món ăn";
     var item = Model.Item;
     var basePrice = Model.BasePriceEffective;
+    var finalPrice = Model.FinalPrice;
+    var hasDynamic = Model.DynamicPriceFactor.HasValue && Model.DynamicPriceFactor.Value != 0;
     var tableCode = Context.Session.GetString("CurrentTableCode");
 }
 
@@ -44,10 +46,25 @@
                     <h1 class="food-title">@item.Name</h1>
 
                     <div class="food-price">
-                        <span class="current-price">@basePrice.ToString("N0") VNĐ</span>
-                        @if (item.DiscountPrice > 0 || item.DiscountPercent > 0)
+                        @if (hasDynamic)
                         {
-                            <span class="original-price">@item.BasePrice.ToString("N0") VNĐ</span>
+                            <span class="current-price text-primary">@finalPrice.ToString("N0") VNĐ</span>
+                            <span class="original-price">@basePrice.ToString("N0") VNĐ</span>
+                            <div class="small text-info">
+                                Giá động x@Model.DynamicPriceFactor!.Value.ToString("0.##")
+                                @if (!string.IsNullOrWhiteSpace(Model.DynamicPricingLabel))
+                                {
+                                    @($"- {Model.DynamicPricingLabel}")
+                                }
+                            </div>
+                        }
+                        else
+                        {
+                            <span class="current-price">@basePrice.ToString("N0") VNĐ</span>
+                            @if (item.DiscountPrice > 0 || item.DiscountPercent > 0)
+                            {
+                                <span class="original-price">@item.BasePrice.ToString("N0") VNĐ</span>
+                            }
                         }
                     </div>
 

@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+using System.Globalization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
@@ -20,7 +17,6 @@ namespace ASM_1.Areas.Admin.Controllers
             _context = context;
         }
 
-        // GET: Admin/Invoices
         public async Task<IActionResult> Index()
         {
             var invoices = await _context.Invoices
@@ -33,7 +29,63 @@ namespace ASM_1.Areas.Admin.Controllers
             return View(invoices);
         }
 
-        // GET: Admin/Invoices/Details/5
+        public async Task<IActionResult> Statistics(DateTime? from, DateTime? to)
+        {
+            var endDate = (to?.Date ?? DateTime.Today).AddDays(1);
+            var startDate = from?.Date ?? endDate.AddDays(-30);
+
+            var invoicesQuery = _context.Invoices
+                .Include(i => i.TableInvoices)
+                .Where(i => i.CreatedDate >= startDate && i.CreatedDate < endDate)
+                .Where(i => i.Status != "Cancelled");
+
+            var invoices = await invoicesQuery.ToListAsync();
+
+            var daily = invoices
+                .GroupBy(i => i.CreatedDate.Date)
+                .OrderBy(g => g.Key)
+                .Select(g => new RevenuePoint
+                {
+                    Label = g.Key.ToString("dd/MM"),
+                    StartDate = g.Key,
+                    Amount = g.Sum(x => x.FinalAmount),
+                    InvoiceCount = g.Count()
+                })
+                .ToList();
+
+            var weekly = invoices
+                .GroupBy(i => GetWeekStart(i.CreatedDate))
+                .OrderBy(g => g.Key)
+                .Select(g =>
+                {
+                    var start = g.Key;
+                    var end = start.AddDays(6);
+                    return new RevenuePoint
+                    {
+                        Label = $"{start:dd/MM} - {end:dd/MM}",
+                        StartDate = start,
+                        EndDate = end,
+                        Amount = g.Sum(x => x.FinalAmount),
+                        InvoiceCount = g.Count()
+                    };
+                })
+                .ToList();
+
+            var vm = new RevenueStatisticsViewModel
+            {
+                FromDate = startDate,
+                ToDate = endDate.AddDays(-1),
+                DailyRevenue = daily,
+                WeeklyRevenue = weekly,
+                TotalRevenue = invoices.Sum(i => i.FinalAmount),
+                TotalInvoices = invoices.Count,
+                AverageDailyRevenue = daily.Any() ? daily.Average(d => d.Amount) : 0m,
+                AverageWeeklyRevenue = weekly.Any() ? weekly.Average(w => w.Amount) : 0m
+            };
+
+            return View(vm);
+        }
+
         public async Task<IActionResult> Details(int? id)
         {
             if (id == null)
@@ -59,16 +111,12 @@ namespace ASM_1.Areas.Admin.Controllers
             return View(invoice);
         }
 
-        // GET: Admin/Invoices/Create
         public IActionResult Create()
         {
             ViewData["DiscountId"] = new SelectList(_context.Discounts, "DiscountId", "Code");
             return View();
         }
 
-        // POST: Admin/Invoices/Create
-        // To protect from overposting attacks, enable the specific properties you want to bind to.
-        // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create([Bind("InvoiceId,InvoiceCode,CreatedDate,TotalAmount,FinalAmount,DiscountId,Status,Notes")] Invoice invoice)
@@ -83,7 +131,6 @@ namespace ASM_1.Areas.Admin.Controllers
             return View(invoice);
         }
 
-        // GET: Admin/Invoices/Edit/5
         public async Task<IActionResult> Edit(int? id)
         {
             if (id == null)
@@ -100,9 +147,6 @@ namespace ASM_1.Areas.Admin.Controllers
             return View(invoice);
         }
 
-        // POST: Admin/Invoices/Edit/5
-        // To protect from overposting attacks, enable the specific properties you want to bind to.
-        // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(int id, [Bind("InvoiceId,InvoiceCode,CreatedDate,TotalAmount,FinalAmount,DiscountId,Status,Notes")] Invoice invoice)
@@ -136,7 +180,6 @@ namespace ASM_1.Areas.Admin.Controllers
             return View(invoice);
         }
 
-        // GET: Admin/Invoices/Delete/5
         public async Task<IActionResult> Delete(int? id)
         {
             if (id == null)
@@ -155,7 +198,6 @@ namespace ASM_1.Areas.Admin.Controllers
             return View(invoice);
         }
 
-        // POST: Admin/Invoices/Delete/5
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(int id)
@@ -173,6 +215,13 @@ namespace ASM_1.Areas.Admin.Controllers
         private bool InvoiceExists(int id)
         {
             return _context.Invoices.Any(e => e.InvoiceId == id);
+        }
+
+        private static DateTime GetWeekStart(DateTime date)
+        {
+            var day = date.Date;
+            int diff = (7 + (int)day.DayOfWeek - (int)DayOfWeek.Monday) % 7;
+            return day.AddDays(-diff);
         }
     }
 }

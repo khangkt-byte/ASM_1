@@ -1,4 +1,7 @@
-﻿using ASM_1.Data;
+using System;
+using System.Linq;
+using System.Threading.Tasks;
+using ASM_1.Data;
 using ASM_1.Models.Food;
 using ASM_1.Services;
 using Microsoft.AspNetCore.Mvc;
@@ -12,12 +15,14 @@ namespace ASM_1.Controllers
         private readonly ApplicationDbContext _context;
         private readonly TableCodeService _tableCodeService;
         private readonly UserSessionService _userSessionService;
+        private readonly ITableTrackerService _tableTracker;
 
-        public FoodController(ApplicationDbContext context, TableCodeService tableCodeService, UserSessionService userSessionService)
+        public FoodController(ApplicationDbContext context, TableCodeService tableCodeService, UserSessionService userSessionService, ITableTrackerService tableTracker)
         {
             _context = context;
             _tableCodeService = tableCodeService;
             _userSessionService = userSessionService;
+            _tableTracker = tableTracker;
         }
 
         [HttpGet]
@@ -35,54 +40,64 @@ namespace ASM_1.Controllers
                 return RedirectToAction("InvalidTable");
             }
 
-            _userSessionService.GetOrCreateUserSessionId(tableCode);
+            var sessionId = _userSessionService.GetOrCreateUserSessionId(tableCode);
+            _tableTracker.AddGuest(table.TableId, sessionId);
+
+            var now = DateTime.UtcNow;
+            decimal? dynamicFactor = null;
+            string? dynamicLabel = null;
+            if (PricingHelper.TryGetDynamicFactor(table, now, out var factor, out var label))
+            {
+                dynamicFactor = factor;
+                dynamicLabel = label;
+            }
 
             var model = new MenuOverviewViewModel
             {
                 Categories = await _context.Categories.ToListAsync(),
                 Combos = await _context.Combos.Include(c => c.ComboDetails!).ThenInclude(cd => cd.FoodItem).ToListAsync(),
-                FoodItems = await _context.FoodItems.Include(f => f.Category).ToListAsync()
+                FoodItems = await _context.FoodItems.Include(f => f.Category).ToListAsync(),
+                DynamicPricingLabel = dynamicLabel,
+                DynamicPriceFactor = dynamicFactor,
+                TableName = table.TableName
             };
 
+            if (dynamicFactor.HasValue && dynamicFactor.Value > 0 && dynamicFactor.Value != 1m)
+            {
+                foreach (var food in model.FoodItems)
+                {
+                    var basePrice = PricingHelper.CalculateEffectiveBasePrice(food);
+                    model.FoodPriceOverrides[food.FoodItemId] = PricingHelper.ApplyDynamicFactor(basePrice, dynamicFactor);
+                }
+
+                foreach (var combo in model.Combos)
+                {
+                    var comboPrice = PricingHelper.CalculateComboPrice(combo);
+                    model.ComboPriceOverrides[combo.ComboId] = PricingHelper.ApplyDynamicFactor(comboPrice, dynamicFactor);
+                }
+            }
+
             HttpContext.Session.SetString("CurrentTableCode", tableCode);
+            ViewBag.DynamicPricingLabel = dynamicLabel;
+            ViewBag.DynamicPriceFactor = dynamicFactor;
+            ViewBag.CurrentTableName = table.TableName;
 
             return View(model);
         }
 
-        //public async Task<IActionResult> Details(int id)
-        //{
-        //    var foodItem = await _context.FoodItems
-        //        .Include(f => f.Category)
-        //        .Include(f => f.FoodOptions)
-        //        .FirstOrDefaultAsync(f => f.FoodItemId == id);
-        //    if (foodItem == null)
-        //    {
-        //        return NotFound();
-        //    }
-        //    return View(foodItem);
-        //}
-
-        // /{tableCode}/food/{slug}
         [HttpGet("/food/{slug}")]
         public IActionResult Detail(string tableCode, string slug)
         {
             var tableId = _tableCodeService.DecryptTableCode(tableCode);
             if (tableId == null) return RedirectToAction("InvalidTable");
 
-            // 1) Lấy món
             var item = _context.FoodItems
                                .AsNoTracking()
                                .FirstOrDefault(f => f.Slug == slug);
             if (item == null) return NotFound();
 
-            // 2) Tính giá gốc hiệu lực
-            decimal basePrice = item.DiscountPrice > 0
-                ? item.DiscountPrice
-                : (item.DiscountPercent > 0
-                    ? item.BasePrice * (100 - item.DiscountPercent) / 100
-                    : item.BasePrice);
+            decimal basePrice = PricingHelper.CalculateEffectiveBasePrice(item);
 
-            // 3) Lấy các nhóm tuỳ chọn đã gắn vào món + values
             var migs = _context.MenuItemOptionGroups
                                .AsNoTracking()
                                .Where(m => m.FoodItemId == item.FoodItemId)
@@ -92,13 +107,11 @@ namespace ASM_1.Controllers
                                .AsSplitQuery()
                                .ToList();
 
-            // 4) Lấy override giá trị theo món
             var valueOverrides = _context.MenuItemOptionValues
                                          .AsNoTracking()
                                          .Where(v => v.FoodItemId == item.FoodItemId)
                                          .ToList();
 
-            // 5) Build ViewModel.Groups (đã merge override & loại ẩn)
             var groups = migs.Select(m =>
             {
                 var g = m.OptionGroup;
@@ -144,15 +157,28 @@ namespace ASM_1.Controllers
             })
             .ToList();
 
-            // 6) Trả ViewModel cho Razor View detail mới
+            var table = _context.Tables.AsNoTracking().FirstOrDefault(b => b.TableId == tableId);
+            decimal finalPrice = basePrice;
+            decimal? dynamicFactor = null;
+            string? dynamicLabel = null;
+            if (PricingHelper.TryGetDynamicFactor(table, DateTime.UtcNow, out var factor, out var label))
+            {
+                dynamicFactor = factor;
+                dynamicLabel = label;
+                finalPrice = PricingHelper.ApplyDynamicFactor(basePrice, dynamicFactor);
+            }
+
             var vm = new ProductDetailViewModel
             {
                 Item = item,
                 BasePriceEffective = basePrice,
-                Groups = groups
+                FinalPrice = finalPrice,
+                Groups = groups,
+                DynamicPriceFactor = dynamicFactor,
+                DynamicPricingLabel = dynamicLabel
             };
 
-            return View(vm); // nếu View name khác, đổi: return View("DetailV2", vm);
+            return View(vm);
         }
     }
 }

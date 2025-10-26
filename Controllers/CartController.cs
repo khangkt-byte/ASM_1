@@ -1,10 +1,13 @@
-﻿using ASM_1.Data;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text.Json;
+using System.Threading.Tasks;
+using ASM_1.Data;
 using ASM_1.Models.Food;
 using ASM_1.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Newtonsoft.Json;
-using System.Security.Claims;
 
 namespace ASM_1.Controllers
 {
@@ -12,28 +15,28 @@ namespace ASM_1.Controllers
     {
         private readonly TableCodeService _tableCodeService;
         private readonly UserSessionService _userSessionService;
+        private readonly ITableTrackerService _tableTracker;
+        private static readonly JsonSerializerOptions JsonOptions = new() { PropertyNameCaseInsensitive = true };
 
-        public CartController(ApplicationDbContext context, TableCodeService tableCodeService, UserSessionService userSessionService) : base(context)
+        public CartController(ApplicationDbContext context, TableCodeService tableCodeService, UserSessionService userSessionService, ITableTrackerService tableTracker)
+            : base(context)
         {
             _tableCodeService = tableCodeService;
             _userSessionService = userSessionService;
+            _tableTracker = tableTracker;
         }
 
         [HttpGet("{tableCode}/cart")]
         public async Task<IActionResult> Index(string tableCode)
         {
-            //if (!User.Identity?.IsAuthenticated ?? true)
-            //{
-            //    TempData["ErrorMessage"] = "Bạn cần đăng nhập để xem giỏ hàng.";
-            //    return RedirectToAction("Login", "Account");
-            //}
-
             var tableId = _tableCodeService.DecryptTableCode(tableCode);
             if (tableId == null) return RedirectToAction("InvalidTable");
 
             string userId = _userSessionService.GetOrCreateUserSessionId(tableCode);
-
             var cart = await GetCartAsync(userId);
+
+            await PopulateDynamicPricingBannerAsync(tableId.Value);
+
             return View(cart.CartItems);
         }
 
@@ -41,13 +44,10 @@ namespace ASM_1.Controllers
         [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
         public async Task<IActionResult> CartCountValue(string tableCode)
         {
-            //if (!(User?.Identity?.IsAuthenticated ?? false))
-            //    return Content("0", "text/plain");
-
             string userId = _userSessionService.GetOrCreateUserSessionId(tableCode);
             if (userId == null)
             {
-                return Content("0", "text/plain"); // hoặc xử lý khác tùy bạn
+                return Content("0", "text/plain");
             }
 
             var count = await _context.CartItems
@@ -57,16 +57,9 @@ namespace ASM_1.Controllers
             return Content(count.ToString(), "text/plain");
         }
 
-        // THÊM MỚI: Action Checkout
         [HttpGet("{tableCode}/cart/check")]
         public async Task<IActionResult> Checkout(string tableCode)
         {
-            //if (!User.Identity?.IsAuthenticated ?? true)
-            //{
-            //    TempData["ErrorMessage"] = "Bạn cần đăng nhập để thanh toán.";
-            //    return RedirectToAction("Login", "Account");
-            //}
-
             var tableId = _tableCodeService.DecryptTableCode(tableCode);
             if (tableId == null) return RedirectToAction("InvalidTable");
 
@@ -79,10 +72,23 @@ namespace ASM_1.Controllers
                 return RedirectToAction("Index", new { tableCode });
             }
 
+            await PopulateDynamicPricingBannerAsync(tableId.Value);
+
+            if (TempData.ContainsKey("DiscountError"))
+            {
+                ViewBag.DiscountError = TempData["DiscountError"];
+            }
+
+            if (TempData.ContainsKey("LastDiscountCode"))
+            {
+                ViewBag.LastDiscountCode = TempData.Peek("LastDiscountCode")?.ToString();
+            }
+
+            TempData.Keep("LastDiscountCode");
+
             return View(cart.CartItems);
         }
 
-        //THÊM MỚI: Thanh toán thành công
         [HttpGet("{tableCode}/cart/success")]
         public IActionResult Success(string tableCode)
         {
@@ -93,73 +99,13 @@ namespace ASM_1.Controllers
             return View();
         }
 
-        //    // THÊM MỚI: Xử lý đặt hàng
-        //    [HttpPost]
-        //    [ValidateAntiForgeryToken]
-        //    public async Task<IActionResult> PlaceOrder(string fullName, string phone, string email,
-        //string address, string city, string district, string ward, string note,
-        //string deliveryTime, string paymentMethod)
-        //    {
-        //        // THÊM DEBUG
-        //        Console.WriteLine("=== PlaceOrder method called ===");
-        //        Console.WriteLine($"FullName: {fullName}");
-        //        Console.WriteLine($"Phone: {phone}");
-        //        Console.WriteLine($"DeliveryTime: {deliveryTime}");
-
-        //        if (!User.Identity?.IsAuthenticated ?? true)
-        //        {
-        //            Console.WriteLine("User not authenticated");
-        //            return RedirectToAction("Login", "Account");
-        //        }
-
-        //        string userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)!.Value;
-        //        Console.WriteLine($"UserId: {userId}");
-
-        //        var cart = await GetCartAsync(userId);
-
-        //        if (!cart.CartItems.Any())
-        //        {
-        //            Console.WriteLine("Cart is empty");
-        //            TempData["ErrorMessage"] = "Giỏ hàng của bạn đang trống.";
-        //            return RedirectToAction("Index");
-        //        }
-
-        //        Console.WriteLine($"Cart has {cart.CartItems.Count} items");
-
-        //        // Xóa giỏ hàng sau khi đặt thành công
-        //        _context.CartItems.RemoveRange(cart.CartItems);
-        //        await _context.SaveChangesAsync();
-
-        //        Console.WriteLine("Cart cleared successfully");
-
-        //        // Truyền thông tin qua TempData
-        //        TempData["OrderSuccess"] = true;
-        //        TempData["CustomerName"] = fullName;
-        //        TempData["CustomerPhone"] = phone;
-        //        TempData["CustomerAddress"] = address + ", " + ward + ", " + district + ", " + city;
-        //        TempData["DeliveryType"] = deliveryTime == "now" ? "Tại chỗ" : "Giao hàng";
-        //        TempData["PaymentMethod"] = paymentMethod;
-
-        //        Console.WriteLine("TempData set, redirecting to Success");
-
-        //        return RedirectToAction("Success");
-        //    }
-
         [HttpPost("{tableCode}/cart/place-order")]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> PlaceOrder(string tableCode, string? paymentMethod)
+        public async Task<IActionResult> PlaceOrder(string tableCode, string paymentMethod, string? discountCode)
         {
             var tableId = _tableCodeService.DecryptTableCode(tableCode);
-            if (tableId == null)
-            {
-                TempData["ErrorMessage"] = "Không tìm thấy thông tin bàn từ mã QR.";
-                return RedirectToAction(nameof(Index), new { tableCode });
-            }
+            if (tableId == null) return RedirectToAction("InvalidTable");
 
-            // Ghi nhận ghi chú tổng hợp từ các món (nếu có)
-            string? note = null;
-
-            // 1) Lấy user & giỏ hàng
             string userId = _userSessionService.GetOrCreateUserSessionId(tableCode);
             var cart = await _context.Carts
                 .Include(c => c.CartItems)
@@ -172,48 +118,66 @@ namespace ASM_1.Controllers
                 return RedirectToAction(nameof(Index), new { tableCode });
             }
 
-            var table = await _context.Tables
-                .AsNoTracking()
-                .FirstOrDefaultAsync(t => t.TableId == tableId.Value);
+            var discountResult = await ValidateDiscountAsync(discountCode, cart.CartItems);
+            if (!string.IsNullOrWhiteSpace(discountResult.ErrorMessage))
+            {
+                TempData["DiscountError"] = discountResult.ErrorMessage;
+                if (!string.IsNullOrWhiteSpace(discountCode))
+                {
+                    TempData["LastDiscountCode"] = discountCode;
+                }
+                return RedirectToAction(nameof(Checkout), new { tableCode });
+            }
 
-            // 2) Tính tiền
+            var table = await _context.Tables.FirstOrDefaultAsync(t => t.TableId == tableId);
+            var linkedTableIds = new List<int>();
+            TableMergeGroupSnapshot? mergeGroup = null;
+            if (table != null)
+            {
+                linkedTableIds.Add(table.TableId);
+                if (_tableTracker.TryGetMergeGroup(table.TableId, out var group))
+                {
+                    mergeGroup = group;
+                    linkedTableIds = group.TableIds.ToList();
+                }
+            }
+
+            if (linkedTableIds.Count > 0)
+            {
+                var hasPending = await _context.TableInvoices
+                    .Include(ti => ti.Invoice)
+                    .AnyAsync(ti => linkedTableIds.Contains(ti.TableId) && ti.Invoice.Status == "Pending");
+
+                if (hasPending)
+                {
+                    TempData["ErrorMessage"] = "Bàn đang có hóa đơn chờ xử lý. Vui lòng hoàn tất trước khi tạo hóa đơn mới.";
+                    return RedirectToAction(nameof(Checkout), new { tableCode });
+                }
+            }
+
             var subtotal = cart.CartItems.Sum(x => x.UnitPrice * x.Quantity);
-            decimal shipping = 0m; // tuỳ mô hình giao/nhận
-            var finalAmount = subtotal + shipping;
+            decimal shipping = 0m;
+            var discountAmount = discountResult.DiscountAmount;
+            var finalAmount = Math.Max(0m, subtotal - discountAmount + shipping);
 
-            var normalizedPayment = string.IsNullOrWhiteSpace(paymentMethod)
-                ? "cod"
-                : paymentMethod.Trim().ToLowerInvariant();
+            bool isPrepaid = paymentMethod is "momo" or "zalopay" or "vnpay";
+            var nowLocal = DateTime.Now;
 
-            // 3) Lưu dữ liệu: Order + OrderItem (+ snapshot option)
             using var tx = await _context.Database.BeginTransactionAsync();
             try
             {
-                // Tổng hợp ghi chú của từng món để lưu vào đơn
-                var itemNotes = cart.CartItems
-                    .Where(ci => !string.IsNullOrWhiteSpace(ci.Note))
-                    .Select(ci => $"{ci.ProductName}: {ci.Note}")
-                    .ToList();
-                if (itemNotes.Count > 0)
+                var invoice = new Invoice
                 {
-                    note = string.Join(" | ", itemNotes);
-                }
-
-                var order = new Order
-                {
-                    InvoiceCode = NewInvoiceCode(),                // mã hóa đơn
+                    InvoiceCode = NewInvoiceCode(),
                     CreatedDate = nowLocal,
-                    TotalAmount = finalAmount,                    // tổng theo thời điểm đặt
-                    FinalAmount = finalAmount,                    // có thể áp mã giảm/fees sau
-                    Status = "Pending",
-                    IsPrepaid = isPrepaid,
-                    Notes = note
+                    TotalAmount = subtotal,
+                    FinalAmount = finalAmount,
+                    DiscountId = discountResult.Discount?.DiscountId,
+                    Status = isPrepaid ? "Paid" : "Pending"
                 };
-
-                _context.Orders.Add(order);
+                _context.Invoices.Add(invoice);
                 await _context.SaveChangesAsync();
 
-                var orderItemPairs = new List<(OrderItem orderItem, CartItem cartItem)>();
                 foreach (var ci in cart.CartItems)
                 {
                     var oi = new OrderItem
@@ -221,12 +185,15 @@ namespace ASM_1.Controllers
                         OrderId = order.OrderId,
                         FoodItemId = ci.ProductID,
                         Quantity = ci.Quantity,
-                        UnitBasePrice = ci.UnitPrice,
+                        UnitBasePrice = ci.BaseUnitPrice,
                         LineTotal = ci.UnitPrice * ci.Quantity,
                         Status = OrderStatus.Pending,
                         Note = ci.Note,
-                        CreatedAt = DateTime.UtcNow
+                        CreatedAt = DateTime.UtcNow,
+                        DynamicPriceFactor = ci.AppliedDynamicFactor
                     };
+                    _context.OrderItems.Add(oi);
+                    await _context.SaveChangesAsync();
 
                     orderItemPairs.Add((oi, ci));
                 }
@@ -246,24 +213,50 @@ namespace ASM_1.Controllers
 
                         foreach (var opt in pair.cartItem.Options)
                         {
-                            optionSnapshots.Add(new OrderItemOption
+                            var oio = new OrderItemOption
                             {
-                                OrderItemId = pair.orderItem.OrderItemId,
-                                PriceDelta = 0m,
+                                OrderItemId = oi.OrderItemId,
+                                PriceDelta = opt.PriceDelta,
                                 OptionGroupNameSnap = opt.OptionTypeName,
                                 OptionValueNameSnap = opt.OptionName,
                                 OptionValueCodeSnap = null,
-                                OptionGroupId = null,
-                                OptionValueId = null
-                            });
+                                Qty = opt.Quantity,
+                                ScalePicked = opt.ScaleValue
+                            };
+                            _context.OrderItemOptions.Add(oio);
                         }
                     }
 
-                    if (optionSnapshots.Count > 0)
+                    if (isPrepaid)
                     {
-                        _context.OrderItemOptions.AddRange(optionSnapshots);
-                        await _context.SaveChangesAsync();
+                        var detail = new InvoiceDetail
+                        {
+                            InvoiceId = invoice.InvoiceId,
+                            FoodItemId = ci.ProductID,
+                            Quantity = ci.Quantity,
+                            UnitPrice = ci.UnitPrice,
+                            SubTotal = ci.UnitPrice * ci.Quantity
+                        };
+                        _context.InvoiceDetails.Add(detail);
                     }
+                }
+
+                await _context.SaveChangesAsync();
+
+                if (linkedTableIds.Count > 0)
+                {
+                    decimal ratio = linkedTableIds.Count > 0 ? Math.Round(1m / linkedTableIds.Count, 2) : 1m;
+                    foreach (var id in linkedTableIds)
+                    {
+                        _context.TableInvoices.Add(new TableInvoice
+                        {
+                            TableId = id,
+                            InvoiceId = invoice.InvoiceId,
+                            SplitRatio = ratio,
+                            MergeGroupId = mergeGroup?.GroupId
+                        });
+                    }
+                    await _context.SaveChangesAsync();
                 }
 
                 _context.CartItems.RemoveRange(cart.CartItems);
@@ -272,11 +265,18 @@ namespace ASM_1.Controllers
 
                 await tx.CommitAsync();
 
+                TempData.Remove("LastDiscountCode");
+                TempData.Remove("DiscountError");
                 TempData["OrderSuccess"] = true;
-                TempData["PaymentMethod"] = normalizedPayment;
-                TempData["TableName"] = table?.TableName ?? $"Bàn {tableId}";
-                TempData["OrderCode"] = order.OrderCode;
-                TempData["CustomerName"] = "Khách bàn";
+                TempData["PaymentMethod"] = paymentMethod;
+                if (table != null)
+                {
+                    TempData["TableName"] = table.TableName;
+                }
+                if (discountResult.Discount != null)
+                {
+                    TempData["AppliedDiscount"] = discountResult.Discount.Code;
+                }
 
                 return RedirectToAction(nameof(Success), new { tableCode });
             }
@@ -284,40 +284,22 @@ namespace ASM_1.Controllers
             {
                 await tx.RollbackAsync();
                 TempData["ErrorMessage"] = "Có lỗi khi đặt hàng. Vui lòng thử lại.";
-                return RedirectToAction(nameof(Index), new { tableCode });
+                return RedirectToAction(nameof(Checkout), new { tableCode });
             }
-        }
-
-        // ===== Helpers =====
-
-        private static string NewOrderCode()
-        {
-            var ts = DateTime.UtcNow.ToString("yyyyMMdd-HHmmss");
-            var rnd = Guid.NewGuid().ToString("N")[..4].ToUpperInvariant();
-            return $"ORD-{ts}-{rnd}";
         }
 
         [HttpPost("{tableCode}/cart/add")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> AddToCart(
             string tableCode,
-            int id,                               // FoodItemId
-            [FromForm] int[]? selectedOptionIds,  // danh sách FoodOptionId mà user chọn (nhiều loại OptionType)
+            int id,
+            [FromForm] int[]? selectedOptionIds,
+            [FromForm] string? selectionsJson,
             int quantity,
             string? note = null)
         {
-            // 1️⃣ Kiểm tra đăng nhập
-            //if (!User.Identity?.IsAuthenticated ?? true)
-            //{
-            //    TempData["ErrorMessage"] = "Bạn cần đăng nhập để thêm sản phẩm vào giỏ hàng.";
-            //    return RedirectToAction("Login", "Account");
-            //}
-
-
-
             quantity = Math.Clamp(quantity, 1, 10);
 
-            // 2️⃣ Lấy món ăn
             var foodItem = await _context.FoodItems
                 .AsNoTracking()
                 .FirstOrDefaultAsync(f => f.FoodItemId == id);
@@ -325,53 +307,58 @@ namespace ASM_1.Controllers
             if (foodItem == null)
                 return NotFound();
 
-            // 3️⃣ Lấy danh sách Option mà người dùng chọn
-            var selectedOptions = (selectedOptionIds != null && selectedOptionIds.Length > 0)
-                ? await _context.FoodOptions
-                    .Include(o => o.OptionType)
-                    .AsNoTracking()
-                    .Where(o => selectedOptionIds.Contains(o.FoodOptionId))
-                    .ToListAsync()
-                : new List<FoodOption>();
+            var tableId = _tableCodeService.DecryptTableCode(tableCode);
+            Table? table = null;
+            decimal? dynamicFactor = null;
+            if (tableId.HasValue)
+            {
+                table = await _context.Tables.AsNoTracking().FirstOrDefaultAsync(t => t.TableId == tableId.Value);
+                if (table != null && PricingHelper.TryGetDynamicFactor(table, DateTime.UtcNow, out var factor, out _))
+                {
+                    dynamicFactor = factor;
+                }
+            }
 
-            // 4️⃣ Tính giá tổng (base + phụ thu)
-            decimal basePrice = foodItem.DiscountPrice > 0 ? foodItem.DiscountPrice : foodItem.BasePrice;
-            decimal extraPrice = selectedOptions.Sum(o => o.ExtraPrice);
-            decimal unitPrice = basePrice + extraPrice;
+            var (resolvedOptions, optionsTotal) = await ResolveSelectedOptionsAsync(id, selectionsJson, selectedOptionIds);
 
-            // 5️⃣ Lấy user ID
+            decimal basePrice = PricingHelper.CalculateEffectiveBasePrice(foodItem);
+            decimal priceBeforeDynamic = basePrice + optionsTotal;
+            decimal finalUnitPrice = dynamicFactor.HasValue && dynamicFactor.Value > 0 && dynamicFactor.Value != 1m
+                ? PricingHelper.ApplyDynamicFactor(priceBeforeDynamic, dynamicFactor)
+                : priceBeforeDynamic;
+
             string userId = _userSessionService.GetOrCreateUserSessionId(tableCode);
-
-            // 6️⃣ Lấy hoặc tạo giỏ hàng
             var cart = await GetCartAsync(userId);
 
-            // 7️⃣ Kiểm tra xem đã có món trùng (cùng sản phẩm, cùng option, cùng ghi chú)
+            var normalizedNote = (note ?? string.Empty).Trim();
+            var optionSignature = BuildOptionSignature(resolvedOptions);
             var sameItem = cart.CartItems.FirstOrDefault(i =>
                 i.ProductID == id &&
-                i.Options.Select(o => o.OptionTypeName + ":" + o.OptionName)
-                    .OrderBy(x => x)
-                    .SequenceEqual(selectedOptions
-                        .Select(o => o.OptionType.TypeName + ":" + o.OptionName)
-                        .OrderBy(x => x)) &&
-                string.Equals((i.Note ?? "").Trim(), (note ?? "").Trim(), StringComparison.OrdinalIgnoreCase)
-            );
+                Nullable.Equals(i.AppliedDynamicFactor, dynamicFactor) &&
+                string.Equals((i.Note ?? string.Empty).Trim(), normalizedNote, StringComparison.OrdinalIgnoreCase) &&
+                BuildOptionSignature(i.Options ?? new List<CartItemOption>()) == optionSignature);
 
-            // 8️⃣ Nếu chưa có thì thêm mới
             if (sameItem == null)
             {
                 var newItem = new CartItem
                 {
                     ProductID = foodItem.FoodItemId,
                     ProductName = foodItem.Name,
-                    ProductImage = foodItem.ImageUrl ?? "",
-                    Note = note?.Trim() ?? "",
-                    UnitPrice = unitPrice,
+                    ProductImage = foodItem.ImageUrl ?? string.Empty,
+                    Note = normalizedNote,
                     Quantity = quantity,
-                    TotalPrice = unitPrice * quantity,
-                    Options = selectedOptions.Select(opt => new CartItemOption
+                    BaseUnitPrice = basePrice,
+                    OptionsTotal = optionsTotal,
+                    UnitPrice = finalUnitPrice,
+                    TotalPrice = finalUnitPrice * quantity,
+                    AppliedDynamicFactor = dynamicFactor,
+                    Options = resolvedOptions.Select(opt => new CartItemOption
                     {
-                        OptionTypeName = opt.OptionType.TypeName,
-                        OptionName = opt.OptionName
+                        OptionTypeName = opt.OptionTypeName,
+                        OptionName = opt.OptionName,
+                        PriceDelta = opt.PriceDelta,
+                        Quantity = opt.Quantity,
+                        ScaleValue = opt.ScaleValue
                     }).ToList()
                 };
 
@@ -379,7 +366,6 @@ namespace ASM_1.Controllers
             }
             else
             {
-                // Nếu trùng thì chỉ cộng số lượng
                 sameItem.Quantity += quantity;
                 sameItem.TotalPrice = sameItem.UnitPrice * sameItem.Quantity;
             }
@@ -436,6 +422,174 @@ namespace ASM_1.Controllers
             return RedirectToAction(nameof(Index), new { tableCode });
         }
 
+        private async Task PopulateDynamicPricingBannerAsync(int tableId)
+        {
+            var table = await _context.Tables.AsNoTracking().FirstOrDefaultAsync(t => t.TableId == tableId);
+            if (table == null) return;
+
+            if (PricingHelper.TryGetDynamicFactor(table, DateTime.UtcNow, out var factor, out var label))
+            {
+                ViewBag.DynamicPricingLabel = label;
+                ViewBag.DynamicPriceFactor = factor;
+                ViewBag.TableName = table.TableName;
+            }
+        }
+
+        private async Task<(List<CartItemOption> Options, decimal OptionsTotal)> ResolveSelectedOptionsAsync(int foodItemId, string? selectionsJson, int[]? legacyOptionIds)
+        {
+            if (!string.IsNullOrWhiteSpace(selectionsJson))
+            {
+                var selections = JsonSerializer.Deserialize<List<SelectionDto>>(selectionsJson, JsonOptions) ?? new List<SelectionDto>();
+                var valueIds = selections.Select(s => s.OptionValueId).Where(id => id > 0).Distinct().ToList();
+
+                if (valueIds.Count > 0)
+                {
+                    var optionValues = await _context.OptionValues
+                        .Include(v => v.OptionGroup)
+                        .Where(v => valueIds.Contains(v.OptionValueId))
+                        .ToListAsync();
+
+                    var overrides = await _context.MenuItemOptionValues
+                        .Where(v => v.FoodItemId == foodItemId && valueIds.Contains(v.OptionValueId))
+                        .ToDictionaryAsync(v => v.OptionValueId);
+
+                    var lookup = optionValues.ToDictionary(v => v.OptionValueId);
+                    var results = new List<CartItemOption>();
+                    decimal total = 0m;
+
+                    foreach (var selection in selections)
+                    {
+                        if (!lookup.TryGetValue(selection.OptionValueId, out var value)) continue;
+
+                        var quantity = Math.Max(1, selection.Qty);
+                        var priceDelta = overrides.TryGetValue(value.OptionValueId, out var ov) && ov.PriceDeltaOverride.HasValue
+                            ? ov.PriceDeltaOverride.Value
+                            : value.PriceDelta;
+
+                        results.Add(new CartItemOption
+                        {
+                            OptionTypeName = value.OptionGroup.Name,
+                            OptionName = value.Name,
+                            PriceDelta = priceDelta,
+                            Quantity = quantity,
+                            ScaleValue = selection.ScalePicked
+                        });
+
+                        total += priceDelta * quantity;
+                    }
+
+                    return (results, total);
+                }
+            }
+
+            if (legacyOptionIds != null && legacyOptionIds.Length > 0)
+            {
+                var foodOptions = await _context.FoodOptions
+                    .Include(o => o.OptionType)
+                    .AsNoTracking()
+                    .Where(o => legacyOptionIds.Contains(o.FoodOptionId))
+                    .ToListAsync();
+
+                var results = foodOptions.Select(opt => new CartItemOption
+                {
+                    OptionTypeName = opt.OptionType?.TypeName ?? "Tùy chọn",
+                    OptionName = opt.OptionName,
+                    PriceDelta = opt.ExtraPrice,
+                    Quantity = 1
+                }).ToList();
+
+                var total = results.Sum(o => o.PriceDelta);
+                return (results, total);
+            }
+
+            return (new List<CartItemOption>(), 0m);
+        }
+
+        private static string BuildOptionSignature(IEnumerable<CartItemOption> options)
+        {
+            return string.Join("|", (options ?? Array.Empty<CartItemOption>())
+                .OrderBy(o => o.OptionTypeName)
+                .ThenBy(o => o.OptionName)
+                .ThenBy(o => o.Quantity)
+                .Select(o => $"{o.OptionTypeName}:{o.OptionName}:{o.Quantity}:{o.PriceDelta}:{o.ScaleValue}"));
+        }
+
+        private async Task<DiscountValidationResult> ValidateDiscountAsync(string? discountCode, List<CartItem> items)
+        {
+            if (string.IsNullOrWhiteSpace(discountCode))
+            {
+                return new DiscountValidationResult(null, 0m, null);
+            }
+
+            var normalized = discountCode.Trim();
+            var discount = await _context.Discounts
+                .Include(d => d.Combos!)
+                    .ThenInclude(c => c.ComboDetails!)
+                .FirstOrDefaultAsync(d => d.Code == normalized);
+
+            if (discount == null)
+            {
+                return new DiscountValidationResult(null, 0m, "Mã giảm giá không hợp lệ.");
+            }
+
+            var now = DateTime.Now;
+            if (!discount.IsActive || discount.StartDate > now || discount.EndDate < now)
+            {
+                return new DiscountValidationResult(discount, 0m, "Mã giảm giá đã hết hạn hoặc chưa kích hoạt.");
+            }
+
+            if (discount.Combos != null && discount.Combos.Count > 0)
+            {
+                var eligibleItemIds = discount.Combos
+                    .SelectMany(c => c.ComboDetails ?? new List<ComboDetail>())
+                    .Select(cd => cd.FoodItemId)
+                    .ToHashSet();
+
+                bool matches = items.Any(ci => eligibleItemIds.Contains(ci.ProductID));
+                if (!matches)
+                {
+                    return new DiscountValidationResult(discount, 0m, "Mã giảm giá chỉ áp dụng cho các combo đủ điều kiện.");
+                }
+            }
+
+            var subtotal = items.Sum(ci => ci.UnitPrice * ci.Quantity);
+            if (subtotal <= 0)
+            {
+                return new DiscountValidationResult(discount, 0m, "Đơn hàng chưa đủ điều kiện để áp dụng mã giảm giá.");
+            }
+
+            var discountValue = subtotal * discount.Percent / 100m;
+            if (discount.MaxAmount.HasValue)
+            {
+                discountValue = Math.Min(discountValue, discount.MaxAmount.Value);
+            }
+
+            discountValue = decimal.Round(discountValue, 0, MidpointRounding.AwayFromZero);
+
+            if (discountValue <= 0)
+            {
+                return new DiscountValidationResult(discount, 0m, "Giá trị mã giảm giá không phù hợp với đơn hàng hiện tại.");
+            }
+
+            return new DiscountValidationResult(discount, discountValue, null);
+        }
+
+        private static string NewInvoiceCode()
+        {
+            var ts = DateTime.UtcNow.ToString("yyyyMMdd-HHmmss");
+            var rnd = Guid.NewGuid().ToString("N")[..3].ToUpperInvariant();
+            return $"INV-{ts}-{rnd}";
+        }
+
+        private record SelectionDto
+        {
+            public int OptionValueId { get; set; }
+            public int GroupId { get; set; }
+            public int Qty { get; set; } = 1;
+            public decimal? ScalePicked { get; set; }
+            public string? Type { get; set; }
+        }
+
+        private record DiscountValidationResult(Discount? Discount, decimal DiscountAmount, string? ErrorMessage);
     }
 }
-

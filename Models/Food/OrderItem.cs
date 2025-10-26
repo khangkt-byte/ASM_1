@@ -20,6 +20,7 @@ namespace ASM_1.Models.Food
         [Required] public OrderStatus Status { get; set; } = OrderStatus.Pending;
         [MaxLength(200)] public string? Note { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        [Column(TypeName = "decimal(5,2)")] public decimal? DynamicPriceFactor { get; set; }
         public ICollection<OrderItemOption> Options { get; set; } = new List<OrderItemOption>();
     }
 }
