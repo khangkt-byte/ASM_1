@@ -1,0 +1,132 @@
+@model ASM_1.Models.Food.RevenueStatisticsViewModel
+
+@{
+    ViewData["Title"] = "Thống kê doanh thu";
+}
+
+<h2 class="mb-3">Thống kê doanh thu</h2>
+
+<form asp-action="Statistics" method="get" class="row g-3 align-items-end mb-4">
+    <div class="col-md-3">
+        <label class="form-label">Từ ngày</label>
+        <input type="date" name="from" value="@Model.FromDate.ToString("yyyy-MM-dd")" class="form-control" />
+    </div>
+    <div class="col-md-3">
+        <label class="form-label">Đến ngày</label>
+        <input type="date" name="to" value="@Model.ToDate.ToString("yyyy-MM-dd")" class="form-control" />
+    </div>
+    <div class="col-md-3">
+        <button type="submit" class="btn btn-primary">
+            <i class="bi bi-filter"></i> Lọc
+        </button>
+        <a asp-action="Statistics" class="btn btn-outline-secondary ms-2">Đặt lại</a>
+    </div>
+</form>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h6 class="text-muted">Tổng doanh thu</h6>
+                <h4 class="mb-0">@Model.TotalRevenue.ToString("N0") ₫</h4>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h6 class="text-muted">Tổng hóa đơn</h6>
+                <h4 class="mb-0">@Model.TotalInvoices</h4>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h6 class="text-muted">Doanh thu trung bình/ngày</h6>
+                <h4 class="mb-0">@Model.AverageDailyRevenue.ToString("N0") ₫</h4>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h6 class="text-muted">Doanh thu trung bình/tuần</h6>
+                <h4 class="mb-0">@Model.AverageWeeklyRevenue.ToString("N0") ₫</h4>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-6">
+        <div class="card shadow-sm">
+            <div class="card-header bg-light fw-semibold">Theo ngày</div>
+            <div class="card-body p-0">
+                <table class="table table-sm mb-0">
+                    <thead>
+                        <tr>
+                            <th>Ngày</th>
+                            <th class="text-end">Doanh thu</th>
+                            <th class="text-end">Số hóa đơn</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model.DailyRevenue.Any())
+                        {
+                            foreach (var point in Model.DailyRevenue)
+                            {
+                                <tr>
+                                    <td>@point.Label</td>
+                                    <td class="text-end">@point.Amount.ToString("N0") ₫</td>
+                                    <td class="text-end">@point.InvoiceCount</td>
+                                </tr>
+                            }
+                        }
+                        else
+                        {
+                            <tr>
+                                <td colspan="3" class="text-center text-muted">Không có dữ liệu.</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="card shadow-sm">
+            <div class="card-header bg-light fw-semibold">Theo tuần</div>
+            <div class="card-body p-0">
+                <table class="table table-sm mb-0">
+                    <thead>
+                        <tr>
+                            <th>Khoảng thời gian</th>
+                            <th class="text-end">Doanh thu</th>
+                            <th class="text-end">Số hóa đơn</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model.WeeklyRevenue.Any())
+                        {
+                            foreach (var point in Model.WeeklyRevenue)
+                            {
+                                <tr>
+                                    <td>@point.Label</td>
+                                    <td class="text-end">@point.Amount.ToString("N0") ₫</td>
+                                    <td class="text-end">@point.InvoiceCount</td>
+                                </tr>
+                            }
+                        }
+                        else
+                        {
+                            <tr>
+                                <td colspan="3" class="text-center text-muted">Không có dữ liệu.</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>

@@ -112,7 +112,14 @@
             <h3><i class="fas fa-receipt"></i> Thông tin đơn hàng</h3>
             <p><strong>Bàn:</strong> @TempData["TableName"]</p>
             <p><strong>Tên:</strong> @TempData["CustomerName"]</p>
-            @* <p><strong>Phương thức thanh toán:</strong> @TempData["PaymentMethod"]</p> *@
+            @if (TempData["PaymentMethod"] != null)
+            {
+                <p><strong>Phương thức thanh toán:</strong> @TempData["PaymentMethod"]</p>
+            }
+            @if (TempData["AppliedDiscount"] != null)
+            {
+                <p><strong>Mã giảm giá:</strong> @TempData["AppliedDiscount"]</p>
+            }
             <p><strong>Thời gian đặt:</strong> @DateTime.Now.ToString("dd/MM/yyyy HH:mm")</p>
         </div>
 

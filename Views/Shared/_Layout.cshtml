@@ -504,9 +504,14 @@
       const el = document.querySelector(".cart-count");
       if (!el) return;
 
-      fetch('@Url.Action("CartCountValue", "Cart", new { tableCode })', { cache: "no-store" })
-        .then(r => r.text())
-        .then(txt => el.textContent = txt)
-        .catch(console.error);
+      const refreshCartCount = () => {
+        fetch('@Url.Action("CartCountValue", "Cart", new { tableCode })', { cache: "no-store" })
+          .then(r => r.text())
+          .then(txt => el.textContent = txt)
+          .catch(console.error);
+      };
+
+      refreshCartCount();
+      setInterval(refreshCartCount, 30000);
     });
 </script>

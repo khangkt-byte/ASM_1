@@ -1,4 +1,4 @@
-﻿@model IEnumerable<ASM_1.Models.Food.Table>
+@model ASM_1.Models.Food.TableManagementViewModel
 
 @{
     ViewData["Title"] = "Danh sách bàn";
@@ -6,77 +6,159 @@
 
 <div class="container mt-4">
     <div class="d-flex justify-content-between align-items-center mb-3">
-        <h2 class="fw-bold text-primary">🍽️ Danh sách bàn</h2>
+        <h2 class="fw-bold text-primary">🍽️ Quản lý bàn</h2>
         <a asp-action="Create" class="btn btn-success">
             <i class="bi bi-plus-circle"></i> Thêm bàn mới
         </a>
     </div>
 
-    <form asp-action="GenerateAll" method="post" class="mb-3">
-        <button class="btn btn-outline-primary">
-            <i class="bi bi-qr-code"></i> Tạo QR cho tất cả bàn
-        </button>
-    </form>
-
-    <table class="table table-hover align-middle shadow-sm rounded">
-        <thead class="table-primary">
-            <tr class="text-center">
-                <th>Tên bàn</th>
-                <th>Số ghế</th>
-                <th>Trạng thái</th>
-                <th>QR</th>
-                <th>Thao tác</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var table in Model)
-            {
-                var statusClass = table.Status == "Available" ? "text-success fw-bold" : "text-danger fw-bold";
-                <tr class="text-center">
-                    <td class="fw-semibold">@table.TableName</td>
-                    <td>@table.SeatCount</td>
-                    <td class="@statusClass">
-                        @if (table.Status == "Available")
-                        {
-                            <i class="bi bi-check-circle-fill">Còn trống</i>
-                        }
-                        else
-                        {
-                            <i class="bi bi-x-circle-fill">Đầy</i>
-                        }
-                    </td>
-                    <td>
-                        <img src="@Url.Content($"~/uploads/qr/Table_{table.TableId}.png")"
-                             alt="QR"
-                             width="90"
-                             height="90"
-                             class="rounded border border-2 shadow-sm" />
-                    </td>
-                    <td>
-                        <div class="btn-group" role="group">
-                            <a asp-action="Details" asp-route-id="@table.TableId"
-                               class="btn btn-sm btn-outline-info">
-                                <i class="bi bi-eye"></i>
-                            </a>
-                            <a asp-action="Edit" asp-route-id="@table.TableId"
-                               class="btn btn-sm btn-outline-warning">
-                                <i class="bi bi-pencil"></i>
-                            </a>
-                            <a asp-action="Delete" asp-route-id="@table.TableId"
-                               class="btn btn-sm btn-outline-danger">
-                                <i class="bi bi-trash"></i>
-                            </a>
-                        </div>
-                    </td>
-                </tr>
-            }
-        </tbody>
-    </table>
-
     @if (TempData["Success"] != null)
     {
-        <div class="alert alert-success mt-3">
-            <i class="bi bi-check-circle-fill"></i> @TempData["Success"]
-        </div>
+        <div class="alert alert-success">@TempData["Success"]</div>
     }
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger">@TempData["Error"]</div>
+    }
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+            <span class="fw-semibold">Danh sách bàn hiện có</span>
+            <form asp-action="GenerateAll" method="post" class="mb-0">
+                @Html.AntiForgeryToken()
+                <button class="btn btn-outline-primary btn-sm">
+                    <i class="bi bi-qr-code"></i> Tạo QR cho tất cả bàn
+                </button>
+            </form>
+        </div>
+        <div class="card-body">
+            <form asp-action="Merge" method="post">
+                @Html.AntiForgeryToken()
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead class="table-primary text-center">
+                            <tr>
+                                <th style="width:40px;"><input type="checkbox" id="selectAll" class="form-check-input" /></th>
+                                <th>Tên bàn</th>
+                                <th>Số ghế</th>
+                                <th>Trạng thái</th>
+                                <th>Giá động</th>
+                                <th>Thao tác</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var table in Model.Tables.OrderBy(t => t.TableName))
+                            {
+                                var statusClass = table.Status?.StartsWith("Merged") == true ? "text-warning fw-bold" : table.Status == "Available" ? "text-success fw-bold" : "text-danger fw-bold";
+                                <tr class="text-center">
+                                    <td>
+                                        <input type="checkbox" class="form-check-input table-checkbox" name="selectedTableIds" value="@table.TableId" />
+                                    </td>
+                                    <td class="fw-semibold text-start">@table.TableName</td>
+                                    <td>@table.SeatCount</td>
+                                    <td class="@statusClass">@table.Status</td>
+                                    <td>
+                                        @if (table.DynamicPriceFactor.HasValue)
+                                        {
+                                            <span class="badge bg-info text-dark">x@table.DynamicPriceFactor.Value.ToString("0.##")</span>
+                                            if (!string.IsNullOrWhiteSpace(table.DynamicPriceLabel))
+                                            {
+                                                <div class="small text-muted">@table.DynamicPriceLabel</div>
+                                            }
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">Không</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        <div class="btn-group" role="group">
+                                            <a asp-action="Details" asp-route-id="@table.TableId" class="btn btn-sm btn-outline-info">
+                                                <i class="bi bi-eye"></i>
+                                            </a>
+                                            <a asp-action="Edit" asp-route-id="@table.TableId" class="btn btn-sm btn-outline-warning">
+                                                <i class="bi bi-pencil"></i>
+                                            </a>
+                                            <a asp-action="Delete" asp-route-id="@table.TableId" class="btn btn-sm btn-outline-danger">
+                                                <i class="bi bi-trash"></i>
+                                            </a>
+                                        </div>
+                                        <form asp-action="SplitTable" method="post" class="d-inline">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="tableId" value="@table.TableId" />
+                                            <button type="submit" class="btn btn-link btn-sm">Tách bàn</button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="row g-2 align-items-center mt-3">
+                    <div class="col-md-4">
+                        <input type="text" name="mergeLabel" class="form-control" placeholder="Ghi chú nhóm bàn (tùy chọn)" />
+                    </div>
+                    <div class="col-md-4">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-link-45deg"></i> Gộp bàn đã chọn
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-header bg-light fw-semibold">
+            Nhóm bàn đang gộp
+        </div>
+        <div class="card-body">
+            @if (Model.ActiveMerges.Any())
+            {
+                <div class="list-group">
+                    @foreach (var group in Model.ActiveMerges.OrderBy(g => g.CreatedAt))
+                    {
+                        <div class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="mb-1">@group.DisplayName</h6>
+                                <div class="small text-muted">
+                                    Bàn: @string.Join(", ", group.Tables.Select(t => t.TableName))
+                                </div>
+                                @if (!string.IsNullOrWhiteSpace(group.Label))
+                                {
+                                    <div class="small">Ghi chú: @group.Label</div>
+                                }
+                            </div>
+                            <form asp-action="SplitGroup" method="post" class="mb-0">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="groupId" value="@group.GroupId" />
+                                <button type="submit" class="btn btn-outline-danger btn-sm">
+                                    <i class="bi bi-scissors"></i> Tách nhóm
+                                </button>
+                            </form>
+                        </div>
+                    }
+                </div>
+            }
+            else
+            {
+                <p class="text-muted mb-0">Chưa có nhóm bàn nào được gộp.</p>
+            }
+        </div>
+    </div>
 </div>
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const selectAll = document.getElementById('selectAll');
+            const checkboxes = document.querySelectorAll('.table-checkbox');
+            if (selectAll) {
+                selectAll.addEventListener('change', function () {
+                    checkboxes.forEach(cb => cb.checked = selectAll.checked);
+                });
+            }
+        });
+    </script>
+}

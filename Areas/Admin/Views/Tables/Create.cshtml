@@ -1,35 +1,51 @@
-﻿@model ASM_1.Models.Food.Table
+@model ASM_1.Models.Food.Table
 
 @{
-    ViewData["Title"] = "Create";
+    ViewData["Title"] = "Thêm bàn";
 }
 
-<h1>Create</h1>
+<h2 class="mb-3">Thêm bàn mới</h2>
 
-<h4>Table</h4>
-<hr />
 <div class="row">
-    <div class="col-md-4">
-        <form asp-action="Create">
+    <div class="col-md-6">
+        <form asp-action="Create" method="post" class="card shadow-sm p-4">
+            @Html.AntiForgeryToken()
             <div asp-validation-summary="ModelOnly" class="text-danger"></div>
-            <div class="form-group">
-                <label asp-for="TableName" class="control-label"></label>
+
+            <div class="mb-3">
+                <label asp-for="TableName" class="form-label"></label>
                 <input asp-for="TableName" class="form-control" />
                 <span asp-validation-for="TableName" class="text-danger"></span>
             </div>
-            <div class="form-group">
-                <label asp-for="SeatCount" class="control-label"></label>
+
+            <div class="mb-3">
+                <label asp-for="SeatCount" class="form-label"></label>
                 <input asp-for="SeatCount" class="form-control" />
                 <span asp-validation-for="SeatCount" class="text-danger"></span>
             </div>
-            <div class="form-group">
-                <input type="submit" value="Create" class="btn btn-primary" />
+
+            <div class="mb-3">
+                <label asp-for="DynamicPriceFactor" class="form-label">Hệ số giá động</label>
+                <input asp-for="DynamicPriceFactor" class="form-control" placeholder="Ví dụ: 0.9 hoặc 1.2" />
+                <span class="form-text">Để trống nếu không áp dụng dynamic pricing.</span>
             </div>
+
+            <div class="mb-3">
+                <label asp-for="DynamicPriceValidUntil" class="form-label">Hiệu lực đến</label>
+                <input asp-for="DynamicPriceValidUntil" class="form-control" type="datetime-local" />
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="DynamicPriceLabel" class="form-label">Ghi chú giá động</label>
+                <input asp-for="DynamicPriceLabel" class="form-control" />
+            </div>
+
+            <button type="submit" class="btn btn-primary">Lưu</button>
+            <a asp-action="Index" class="btn btn-outline-secondary ms-2">Quay lại</a>
         </form>
     </div>
 </div>
 
-<div>
-    <a asp-action="Index">Back to List</a>
-</div>
-
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}
