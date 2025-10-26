@@ -493,25 +493,25 @@
     <!-- Scripts -->
     <script src="~/js/site.js" asp-append-version="true"></script>
     <script src="~/js/mobile-menu.js" asp-append-version="true"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const counter = document.querySelector(".cart-count");
+            if (!counter) {
+                return;
+            }
+
+            const refreshCartCount = () => {
+                fetch('@Url.Action("CartCountValue", "Cart", new { tableCode })', { cache: "no-store" })
+                    .then(response => response.text())
+                    .then(text => counter.textContent = text)
+                    .catch(console.error);
+            };
+
+            refreshCartCount();
+            setInterval(refreshCartCount, 30000);
+        });
+    </script>
 
     @RenderSection("Scripts", required: false)
 </body>
 </html>
-
-
-<script>
-    document.addEventListener("DOMContentLoaded", function () {
-      const el = document.querySelector(".cart-count");
-      if (!el) return;
-
-      const refreshCartCount = () => {
-        fetch('@Url.Action("CartCountValue", "Cart", new { tableCode })', { cache: "no-store" })
-          .then(r => r.text())
-          .then(txt => el.textContent = txt)
-          .catch(console.error);
-      };
-
-      refreshCartCount();
-      setInterval(refreshCartCount, 30000);
-    });
-</script>
