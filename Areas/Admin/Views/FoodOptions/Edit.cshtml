@@ -1,0 +1,72 @@
+﻿@model ASM_1.Models.Food.FoodOption
+
+@{
+    ViewData["Title"] = "Edit Food Option";
+}
+
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-warning text-dark d-flex align-items-center">
+                    <i class="bi bi-pencil-square me-2 fs-5"></i>
+                    <h4 class="mb-0">Edit Food Option</h4>
+                </div>
+
+                <div class="card-body">
+                    <form asp-action="Edit">
+                        <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+                        <input type="hidden" asp-for="FoodOptionId" />
+
+                        <div class="mb-3">
+                            <label asp-for="FoodItemId" class="form-label fw-semibold"></label>
+                            <select asp-for="FoodItemId" class="form-select" asp-items="ViewBag.FoodItemId">
+                                <option value="">-- Select Food Item --</option>
+                            </select>
+                            <span asp-validation-for="FoodItemId" class="text-danger"></span>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="OptionName" class="form-label fw-semibold"></label>
+                            <input asp-for="OptionName" class="form-control" placeholder="Enter option name" />
+                            <span asp-validation-for="OptionName" class="text-danger"></span>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="ExtraPrice" class="form-label fw-semibold"></label>
+                            <input asp-for="ExtraPrice" class="form-control" type="number" step="0.01" />
+                            <span asp-validation-for="ExtraPrice" class="text-danger"></span>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="OptionType" class="form-label fw-semibold"></label>
+                            <input asp-for="OptionType" class="form-control" placeholder="e.g. Size, Topping..." />
+                            <span asp-validation-for="OptionType" class="text-danger"></span>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="StockQuantity" class="form-label fw-semibold"></label>
+                            <input asp-for="StockQuantity" class="form-control" type="number" min="0" />
+                            <span asp-validation-for="StockQuantity" class="text-danger"></span>
+                        </div>
+
+                        <div class="d-flex justify-content-between mt-4">
+                            <a asp-action="Index" class="btn btn-secondary">
+                                <i class="bi bi-arrow-left"></i> Back to List
+                            </a>
+                            <button type="submit" class="btn btn-success">
+                                <i class="bi bi-save"></i> Save Changes
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}
