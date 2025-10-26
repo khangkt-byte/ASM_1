@@ -25,6 +25,7 @@ namespace ASM_1.Data
         public DbSet<InvoiceDetail> InvoiceDetails { get; set; }
         public DbSet<InvoiceDetailFoodOption> InvoiceDetailFoodOptions { get; set; }
         public DbSet<TableInvoice> TableInvoices { get; set; }
+        public DbSet<InvoicePaymentShare> InvoicePaymentShares { get; set; }
         //public DbSet<Order> Orders { get; set; }
         public DbSet<OrderItem> OrderItems { get; set; }
         public DbSet<OrderItemOption> OrderItemOptions { get; set; }
@@ -217,6 +218,20 @@ namespace ASM_1.Data
                 .WithMany(i => i.OrderItems)
                 .HasForeignKey(x => x.InvoiceId)
                 .OnDelete(DeleteBehavior.SetNull);
+
+            builder.Entity<InvoicePaymentShare>()
+                .HasOne(x => x.Invoice)
+                .WithMany(i => i.PaymentShares)
+                .HasForeignKey(x => x.InvoiceId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<InvoicePaymentShare>()
+                .Property(x => x.PaymentMethod)
+                .HasMaxLength(40);
+
+            builder.Entity<InvoicePaymentShare>()
+                .Property(x => x.SplitMode)
+                .HasMaxLength(30);
 
             builder.Entity<OrderItem>()
                 .HasOne(x => x.FoodItem)

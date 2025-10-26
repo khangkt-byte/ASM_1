@@ -268,6 +268,126 @@
         font-size: 14px;
     }
 
+/* Bill split */
+.bill-split-section {
+    margin-top: 32px;
+    padding: 24px;
+    background: #fdfdfd;
+    border: 1px solid #f0f0f0;
+    border-radius: 12px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.03);
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.bill-split-section h2 {
+    font-size: 1.25rem;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: #333;
+}
+
+.bill-split-section .section-hint {
+    margin: 0;
+    color: #666;
+    font-size: 0.9rem;
+}
+
+.split-modes {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 16px;
+}
+
+.split-mode {
+    border: 2px solid #e9ecef;
+    border-radius: 12px;
+    padding: 16px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    gap: 12px;
+    background: white;
+}
+
+.split-mode:hover {
+    border-color: #e74c3c;
+    background: #fff6f4;
+}
+
+.split-mode input[type="radio"] {
+    margin-top: 4px;
+}
+
+.split-mode span {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.split-mode strong {
+    color: #333;
+    font-size: 1rem;
+}
+
+.split-mode small {
+    color: #777;
+    font-size: 0.85rem;
+}
+
+.split-participants {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.split-participant-list {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.participant-card {
+    background: white;
+    border: 1px solid #e9ecef;
+    border-radius: 10px;
+    padding: 16px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+}
+
+.participant-extra {
+    margin-top: 10px;
+}
+
+.split-item-name {
+    font-weight: 600;
+    color: #333;
+}
+
+.split-item-options {
+    font-size: 0.8rem;
+}
+
+.split-items table {
+    min-width: 100%;
+    background: white;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.split-items th,
+.split-items td {
+    vertical-align: middle;
+    text-align: center;
+}
+
+.split-items td:first-child,
+.split-items th:first-child {
+    text-align: left;
+}
+
 /* Checkout Sidebar */
 .checkout-sidebar {
     position: sticky;

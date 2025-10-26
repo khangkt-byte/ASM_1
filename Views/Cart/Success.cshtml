@@ -1,7 +1,22 @@
-﻿@using System.Collections.Generic
-@using System.Text.Json
+﻿@using System.Text.Json
+@using System.Text.Json.Serialization
 @{
     ViewData["Title"] = "Đặt hàng thành công";
+    var shareJson = TempData["PaymentShares"] as string;
+    var shareOptions = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+    var shareSummaries = new List<SuccessShareSummary>();
+    if (!string.IsNullOrWhiteSpace(shareJson))
+    {
+        try
+        {
+            shareSummaries = JsonSerializer.Deserialize<List<SuccessShareSummary>>(shareJson!, shareOptions) ?? new();
+        }
+        catch
+        {
+            shareSummaries = new List<SuccessShareSummary>();
+        }
+    }
+
     var tableCode = Context.Session.GetString("CurrentTableCode");
     var splitSummary = TempData["PaymentSplitSummary"] as string;
     var splitNote = TempData["PaymentSplitNote"] as string;
@@ -87,6 +102,61 @@
                 border-bottom: 2px solid #28a745;
                 padding-bottom: 10px;
             }
+
+        .payment-share-summary {
+            margin-top: 20px;
+            padding-top: 12px;
+            border-top: 1px solid #f0f0f0;
+        }
+
+            .payment-share-summary h4 {
+                font-size: 1.1rem;
+                margin-bottom: 12px;
+                color: #333;
+                display: flex;
+                gap: 8px;
+                align-items: center;
+            }
+
+            .payment-share-summary ul {
+                list-style: none;
+                padding: 0;
+                margin: 0;
+                display: flex;
+                flex-direction: column;
+                gap: 8px;
+            }
+
+            .payment-share-summary li {
+                display: flex;
+                justify-content: space-between;
+                align-items: baseline;
+                font-size: 0.95rem;
+                background: #f8f9fa;
+                padding: 10px 12px;
+                border-radius: 6px;
+            }
+
+                .payment-share-summary .share-name {
+                    font-weight: 600;
+                    color: #333;
+                }
+
+                .payment-share-summary .share-method {
+                    color: #555;
+                    font-size: 0.9rem;
+                }
+
+                .payment-share-summary .share-amount {
+                    font-weight: 600;
+                    color: #28a745;
+                }
+
+                .payment-share-summary .share-percent {
+                    color: #888;
+                    font-size: 0.85rem;
+                    margin-left: 6px;
+                }
 
             .order-info p {
                 margin: 12px 0;
@@ -201,34 +271,27 @@
             }
             <p><strong>Thời gian đặt:</strong> @DateTime.Now.ToString("dd/MM/yyyy HH:mm")</p>
 
-            @if (invoiceRequested)
+            @if (shareSummaries.Any())
             {
-                <div class="invoice-section">
-                    <h4><i class="fas fa-file-invoice"></i> Thông tin hóa đơn</h4>
-                    <ul class="list-unstyled mb-0">
-                        @if (!string.IsNullOrWhiteSpace(invoiceCompany))
+                <div class="payment-share-summary">
+                    <h4><i class="fas fa-users"></i> Chi tiết chia hoá đơn</h4>
+                    <ul>
+                        @foreach (var share in shareSummaries)
                         {
-                            <li><strong>Đơn vị:</strong> @invoiceCompany</li>
-                        }
-                        @if (!string.IsNullOrWhiteSpace(invoiceTax))
-                        {
-                            <li><strong>Mã số thuế:</strong> @invoiceTax</li>
-                        }
-                        @if (!string.IsNullOrWhiteSpace(invoiceEmail))
-                        {
-                            <li><strong>Email:</strong> @invoiceEmail</li>
-                        }
-                        @if (!string.IsNullOrWhiteSpace(invoiceAddress))
-                        {
-                            <li><strong>Địa chỉ:</strong> @invoiceAddress</li>
-                        }
-                        @if (!string.IsNullOrWhiteSpace(invoiceNote))
-                        {
-                            <li><strong>Ghi chú:</strong> @invoiceNote</li>
+                            <li>
+                                <span class="share-name">@(string.IsNullOrWhiteSpace(share.Name) ? "Khách" : share.Name)</span>
+                                <span class="share-method">@MethodLabel(share.Method)</span>
+                                <span class="share-amount">@share.Amount.ToString("N0")₫</span>
+                                @if (share.Percentage.HasValue && share.Percentage.Value > 0)
+                                {
+                                    <span class="share-percent">(@share.Percentage.Value.ToString("0.#")%)</span>
+                                }
+                            </li>
                         }
                     </ul>
                 </div>
             }
+
         </div>
 
         <div class="success-actions">
@@ -241,3 +304,22 @@
         </div>
     </div>
 </div>
+
+@functions {
+    private class SuccessShareSummary
+    {
+        public string? ParticipantId { get; set; }
+        public string? Name { get; set; }
+        public decimal Amount { get; set; }
+        public string? Method { get; set; }
+        public decimal? Percentage { get; set; }
+    }
+
+    private static string MethodLabel(string? method) => method?.ToLowerInvariant() switch
+    {
+        "card" => "Thẻ",
+        "momo" => "MoMo",
+        "cash" => "Tiền mặt",
+        _ => "Khác"
+    };
+}

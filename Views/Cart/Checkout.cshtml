@@ -1,5 +1,6 @@
 ﻿@model List<ASM_1.Models.Food.CartItem>
 @using System.Text.Json
+@using System.Text.Json.Serialization
 @{
     ViewData["Title"] = "Thanh toán";
     var totalItems = Model?.Sum(x => x.Quantity) ?? 0;
@@ -9,6 +10,19 @@
     var dynamicFactor = ViewBag.DynamicPriceFactor as decimal?;
     var lastDiscountCode = ViewBag.LastDiscountCode as string ?? string.Empty;
     var discountError = ViewBag.DiscountError as string;
+    var cartPayload = Model?.Select(item => new
+    {
+        id = item.CartItemID,
+        name = item.ProductName,
+        quantity = item.Quantity,
+        price = item.UnitPrice,
+        options = item.Options?.Select(o => new { group = o.OptionTypeName, name = o.OptionName }) ?? Array.Empty<object>()
+    }) ?? Array.Empty<object>();
+    var cartItemsJson = JsonSerializer.Serialize(cartPayload, new JsonSerializerOptions
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+    });
 }
 @section Styles {
     <link rel="stylesheet" href="~/css/pages/checkout.css" />
@@ -212,26 +226,14 @@
                         <h2><i class="fas fa-credit-card"></i> Phương thức thanh toán</h2>
                         <div class="payment-methods">
                             <label class="payment-method">
-                                <input type="radio" name="paymentMethod" value="cod" checked>
+                                <input type="radio" name="paymentMethod" value="cash" checked>
                                 <div class="payment-info">
                                     <div class="payment-icon">
                                         <i class="fas fa-money-bill-wave"></i>
                                     </div>
                                     <div class="payment-details">
-                                        <strong>Thanh toán bằng tiền mặt</strong>
-                                        <span>Thanh toán tại chỗ</span>
-                                    </div>
-                                </div>
-                            </label>
-                            <label class="payment-method">
-                                <input type="radio" name="paymentMethod" value="momo">
-                                <div class="payment-info">
-                                    <div class="payment-icon">
-                                        <img src="~/Images/momo-logo.jpg" alt="MoMo">
-                                    </div>
-                                    <div class="payment-details">
-                                        <strong>Ví điện tử MoMo</strong>
-                                        <span>Thanh toán nhanh chóng qua ví MoMo</span>
+                                        <strong>Tiền mặt tại quầy</strong>
+                                        <span>Thanh toán trực tiếp với nhân viên</span>
                                     </div>
                                 </div>
                             </label>
@@ -243,35 +245,81 @@
                                     </div>
                                     <div class="payment-details">
                                         <strong>Thanh toán bằng thẻ</strong>
-                                        <span>Quẹt thẻ tại quầy hoặc mang máy tới bàn</span>
+                                        <span>Quẹt thẻ hoặc quét QR ngân hàng</span>
                                     </div>
                                 </div>
                             </label>
                             <label class="payment-method">
-                                <input type="radio" name="paymentMethod" value="zalopay">
+                                <input type="radio" name="paymentMethod" value="momo">
                                 <div class="payment-info">
                                     <div class="payment-icon">
-                                        <img src="~/Images/zalopay-logo.jpg" alt="ZaloPay">
+                                        <img src="~/Images/momo-logo.jpg" alt="MoMo">
                                     </div>
                                     <div class="payment-details">
-                                        <strong>Ví điện tử ZaloPay</strong>
-                                        <span>Thanh toán an toàn với ZaloPay</span>
-                                    </div>
-                                </div>
-                            </label>
-                            <label class="payment-method">
-                                <input type="radio" name="paymentMethod" value="vnpay">
-                                <div class="payment-info">
-                                    <div class="payment-icon">
-                                        <img src="~/Images/vnpay-logo.jpg" alt="VNPAY">
-                                    </div>
-                                    <div class="payment-details">
-                                        <strong>VNPAY QR</strong>
-                                        <span>Thanh toán qua ngân hàng với VNPAY</span>
+                                        <strong>Ví MoMo</strong>
+                                        <span>Thanh toán nhanh qua ví điện tử</span>
                                     </div>
                                 </div>
                             </label>
                         </div>
+                    </div>
+
+                    <!-- Split Options -->
+                    <div class="checkout-section bill-split-section">
+                        <h2><i class="fas fa-users"></i> Chia hoá đơn theo bàn</h2>
+                        <p class="section-hint">Mọi người cùng bàn có thể chọn cách thanh toán phù hợp.</p>
+                        <div class="split-modes" data-role="split-mode-list">
+                            <label class="split-mode">
+                                <input type="radio" name="splitMode" value="full" checked>
+                                <span>
+                                    <strong>Một người thanh toán</strong>
+                                    <small>Toàn bộ hoá đơn do một người chi trả</small>
+                                </span>
+                            </label>
+                            <label class="split-mode">
+                                <input type="radio" name="splitMode" value="even">
+                                <span>
+                                    <strong>Chia đều hoá đơn</strong>
+                                    <small>Mỗi người trả số tiền bằng nhau</small>
+                                </span>
+                            </label>
+                            <label class="split-mode">
+                                <input type="radio" name="splitMode" value="percentage">
+                                <span>
+                                    <strong>Chia theo phần trăm</strong>
+                                    <small>Tự đặt tỷ lệ phần trăm cho từng người</small>
+                                </span>
+                            </label>
+                            <label class="split-mode">
+                                <input type="radio" name="splitMode" value="by-item">
+                                <span>
+                                    <strong>Ai gọi món nào trả món đó</strong>
+                                    <small>Phân chia theo từng món cụ thể</small>
+                                </span>
+                            </label>
+                        </div>
+
+                        <div class="split-participants" data-role="participant-manager">
+                            <div class="split-participant-list" data-role="participant-list"></div>
+                            <button type="button" class="btn btn-outline-primary add-participant" data-action="add-participant">
+                                <i class="fas fa-user-plus"></i> Thêm người tham gia
+                            </button>
+                        </div>
+
+                        <div class="split-items" data-role="item-distribution" hidden>
+                            <h3><i class="fas fa-utensils"></i> Phân bổ món ăn</h3>
+                            <div class="table-responsive">
+                                <table class="table table-sm table-bordered">
+                                    <thead>
+                                        <tr data-role="item-header-row"></tr>
+                                    </thead>
+                                    <tbody data-role="item-body"></tbody>
+                                </table>
+                            </div>
+                            <p class="text-muted small mb-0">Chọn số lượng mỗi người thanh toán cho từng món. Phần chưa phân bổ sẽ được giao cho người được chọn trả phần còn lại.</p>
+                        </div>
+
+                        <input type="hidden" name="splitInfo" id="splitInfoInput" />
                     </div>
 
                     <div class="checkout-section">
@@ -399,413 +447,348 @@
 
 @section Scripts {
     <script>
-        (function () {
-            const cartItems = @Html.Raw(JsonSerializer.Serialize(Model.Select(item => new
-            {
-                id = item.CartItemID,
-                name = item.ProductName,
-                total = item.UnitPrice * item.Quantity,
-                quantity = item.Quantity
-            })));
+        (() => {
+            const cartItems = @Html.Raw(cartItemsJson);
+            const form = document.getElementById('checkoutForm');
+            const splitInput = document.getElementById('splitInfoInput');
+            const participantList = document.querySelector('[data-role="participant-list"]');
+            const addButton = document.querySelector('[data-action="add-participant"]');
+            const itemDistribution = document.querySelector('[data-role="item-distribution"]');
+            const itemHeaderRow = document.querySelector('[data-role="item-header-row"]');
+            const itemBody = document.querySelector('[data-role="item-body"]');
 
-            const totalAmount = @subtotal;
-
-            const splitModeOptions = document.getElementById('splitModeOptions');
-            const participantList = document.getElementById('participantList');
-            const addParticipantBtn = document.getElementById('addParticipantBtn');
-            const splitSummary = document.getElementById('splitSummary');
-            const splitNoteInput = document.getElementById('splitNoteInput');
-            const itemAssignment = document.getElementById('itemAssignment');
-            const splitModeInput = document.getElementById('splitModeInput');
-            const splitPayloadInput = document.getElementById('splitPayloadInput');
-            const invoiceToggle = document.getElementById('invoiceRequestToggle');
-            const invoiceDetails = document.getElementById('invoiceDetails');
-            const checkoutForm = document.getElementById('checkoutForm');
-
-            const currencyFormatter = new Intl.NumberFormat('vi-VN');
-
-            const splitState = {
-                mode: 'single',
-                participants: [],
-                latestShares: [],
-                notes: ''
-            };
-
-            const itemAssignmentsMap = new Map();
-
-            function createParticipant(name = '') {
-                if (window.crypto && window.crypto.randomUUID) {
-                    return {
-                        id: crypto.randomUUID(),
-                        name,
-                        percentage: null
-                    };
-                }
-
-                return {
-                    id: Date.now().toString(36) + Math.random().toString(36).slice(2),
-                    name,
-                    percentage: null
-                };
-            }
-
-            function ensureDefaultParticipant() {
-                if (splitState.participants.length === 0) {
-                    splitState.participants.push(createParticipant('Tôi'));
-                }
-            }
-
-            function onModeChanged(newMode) {
-                splitState.mode = newMode;
-                splitModeInput.value = newMode;
-                renderParticipants();
-                renderItemAssignments();
-                updateSummary();
-            }
-
-            function renderParticipants() {
-                ensureDefaultParticipant();
-                participantList.innerHTML = '';
-
-                splitState.participants.forEach((participant, index) => {
-                    const row = document.createElement('div');
-                    row.className = 'participant-row';
-                    row.dataset.id = participant.id;
-
-                    const nameInput = document.createElement('input');
-                    nameInput.type = 'text';
-                    nameInput.className = 'form-control participant-name';
-                    nameInput.placeholder = `Tên người tham gia ${index + 1}`;
-                    nameInput.value = participant.name || '';
-                    nameInput.addEventListener('input', () => {
-                        participant.name = nameInput.value;
-                        refreshItemAssignmentOptions();
-                        updateSummary();
-                    });
-
-                    const percentInput = document.createElement('input');
-                    percentInput.type = 'number';
-                    percentInput.className = 'form-control participant-percentage';
-                    percentInput.step = '0.01';
-                    percentInput.min = '0';
-                    percentInput.max = '100';
-                    percentInput.placeholder = '%';
-                    percentInput.value = participant.percentage ?? '';
-                    percentInput.style.display = splitState.mode === 'percentage' ? 'block' : 'none';
-                    percentInput.addEventListener('input', () => {
-                        participant.percentage = percentInput.value ? parseFloat(percentInput.value) : null;
-                        updateSummary();
-                    });
-
-                    const amountLabel = document.createElement('div');
-                    amountLabel.className = 'participant-amount';
-                    amountLabel.textContent = '0₫';
-
-                    const removeBtn = document.createElement('button');
-                    removeBtn.type = 'button';
-                    removeBtn.className = 'btn-remove';
-                    removeBtn.innerHTML = '<i class="fas fa-times"></i>';
-                    removeBtn.title = 'Xóa người này';
-                    removeBtn.addEventListener('click', () => removeParticipant(participant.id));
-
-                    if (splitState.participants.length === 1) {
-                        removeBtn.disabled = true;
-                        removeBtn.classList.add('text-muted');
-                    }
-
-                    row.appendChild(nameInput);
-                    row.appendChild(percentInput);
-                    row.appendChild(amountLabel);
-                    row.appendChild(removeBtn);
-
-                    participantList.appendChild(row);
-                });
-            }
-
-            function removeParticipant(id) {
-                if (splitState.participants.length <= 1) {
-                    return;
-                }
-
-                splitState.participants = splitState.participants.filter(p => p.id !== id);
-                Array.from(itemAssignmentsMap.entries()).forEach(([key, value]) => {
-                    if (value === id) {
-                        itemAssignmentsMap.delete(key);
-                    }
-                });
-                renderParticipants();
-                renderItemAssignments();
-                updateSummary();
-            }
-
-            function renderItemAssignments() {
-                itemAssignment.innerHTML = '';
-                if (splitState.mode !== 'items') {
-                    itemAssignment.classList.add('d-none');
-                    return;
-                }
-
-                itemAssignment.classList.remove('d-none');
-
-                cartItems.forEach(item => {
-                    const row = document.createElement('div');
-                    row.className = 'item-assignment-row';
-                    row.dataset.itemId = item.id;
-
-                    const name = document.createElement('div');
-                    name.className = 'item-name';
-                    name.innerHTML = `${item.name} <span class="text-muted">x${item.quantity}</span>`;
-
-                    const select = document.createElement('select');
-                    select.className = 'form-select form-select-sm item-participant-select';
-
-                    const emptyOption = document.createElement('option');
-                    emptyOption.value = '';
-                    emptyOption.textContent = 'Chưa chọn';
-                    select.appendChild(emptyOption);
-
-                    splitState.participants.forEach(p => {
-                        const option = document.createElement('option');
-                        option.value = p.id;
-                        option.textContent = p.name || 'Người mới';
-                        select.appendChild(option);
-                    });
-
-                    const current = itemAssignmentsMap.get(String(item.id)) || '';
-                    select.value = current;
-
-                    select.addEventListener('change', () => {
-                        if (select.value) {
-                            itemAssignmentsMap.set(String(item.id), select.value);
-                        } else {
-                            itemAssignmentsMap.delete(String(item.id));
-                        }
-                        updateSummary();
-                    });
-
-                    row.appendChild(name);
-                    row.appendChild(select);
-                    itemAssignment.appendChild(row);
-                });
-            }
-
-            function refreshItemAssignmentOptions() {
-                if (splitState.mode !== 'items') return;
-
-                const selects = itemAssignment.querySelectorAll('select.item-participant-select');
-                selects.forEach(select => {
-                    const currentValue = select.value;
-                    select.innerHTML = '';
-                    const emptyOption = document.createElement('option');
-                    emptyOption.value = '';
-                    emptyOption.textContent = 'Chưa chọn';
-                    select.appendChild(emptyOption);
-
-                    splitState.participants.forEach(p => {
-                        const option = document.createElement('option');
-                        option.value = p.id;
-                        option.textContent = p.name || 'Người mới';
-                        select.appendChild(option);
-                    });
-
-                    if (currentValue && Array.from(select.options).some(opt => opt.value === currentValue)) {
-                        select.value = currentValue;
-                    } else {
-                        select.value = '';
-                    }
-                });
-            }
-
-            function calculateShares() {
-                const participants = splitState.participants;
-                if (!participants.length) {
-                    return [];
-                }
-
-                if (splitState.mode === 'percentage') {
-                    const valid = participants.filter(p => p.name && p.percentage && p.percentage > 0);
-                    if (!valid.length) {
-                        return calculateSingleParticipant();
-                    }
-                    let sum = valid.reduce((acc, p) => acc + p.percentage, 0);
-                    if (sum <= 0) sum = 100;
-                    return valid.map((p, index) => {
-                        const normalized = (p.percentage / sum) * 100;
-                        const amount = totalAmount * normalized / 100;
-                        return {
-                            id: p.id,
-                            name: (p.name || `Khách ${index + 1}`).trim(),
-                            amount,
-                            percentage: normalized
-                        };
-                    });
-                }
-
-                if (splitState.mode === 'equal') {
-                    const valid = participants.filter(p => (p.name || '').trim().length > 0);
-                    const list = valid.length ? valid : participants;
-                    const share = totalAmount / list.length;
-                    return list.map((p, index) => ({
-                        id: p.id,
-                        name: (p.name || `Khách ${index + 1}`).trim(),
-                        amount: share,
-                        percentage: 100 / list.length
-                    }));
-                }
-
-                if (splitState.mode === 'items') {
-                    const result = participants.map((p, index) => ({
-                        id: p.id,
-                        name: (p.name || `Khách ${index + 1}`).trim(),
-                        amount: 0,
-                        items: []
-                    }));
-
-                    cartItems.forEach(item => {
-                        const key = String(item.id);
-                        const assigned = itemAssignmentsMap.get(key);
-                        if (!assigned) {
-                            return;
-                        }
-                        const target = result.find(r => r.id === assigned);
-                        if (target) {
-                            target.amount += item.total;
-                            target.items.push(item.name);
-                        }
-                    });
-
-                    const distributed = result.reduce((acc, curr) => acc + curr.amount, 0);
-                    if (Math.abs(totalAmount - distributed) > 1) {
-                        const fallback = result[0];
-                        if (fallback) {
-                            fallback.amount += totalAmount - distributed;
-                        }
-                    }
-
-                    return result;
-                }
-
-                return calculateSingleParticipant();
-            }
-
-            function calculateSingleParticipant() {
-                const first = splitState.participants[0];
-                return [{
-                    id: first.id,
-                    name: (first.name || 'Khách thanh toán').trim(),
-                    amount: totalAmount,
-                    percentage: 100
-                }];
-            }
-
-            function updateSummary() {
-                const shares = calculateShares();
-                splitState.latestShares = shares;
-
-                participantList.querySelectorAll('.participant-row').forEach(row => {
-                    const amountEl = row.querySelector('.participant-amount');
-                    const share = shares.find(s => s.id === row.dataset.id);
-                    if (amountEl) {
-                        const amount = share ? share.amount : 0;
-                        amountEl.textContent = `${currencyFormatter.format(amount)}₫`;
-                    }
-                    const percentInput = row.querySelector('.participant-percentage');
-                    if (percentInput) {
-                        percentInput.style.display = splitState.mode === 'percentage' ? 'block' : 'none';
-                    }
-                });
-
-                if (!shares.length) {
-                    splitSummary.innerHTML = '';
-                    return;
-                }
-
-                const lines = shares.map(share => {
-                    const amountText = `${currencyFormatter.format(share.amount)}₫`;
-                    if (share.items && share.items.length) {
-                        return `<div><strong>${share.name}</strong>: ${amountText} <small class="text-muted">(${share.items.join(', ')})</small></div>`;
-                    }
-                    if (typeof share.percentage === 'number') {
-                        return `<div><strong>${share.name}</strong>: ${amountText} (${share.percentage.toFixed(1)}%)</div>`;
-                    }
-                    return `<div><strong>${share.name}</strong>: ${amountText}</div>`;
-                });
-
-                splitSummary.innerHTML = `<strong>Chi tiết chia bill:</strong>${lines.join('')}`;
-            }
-
-            function buildPayload() {
-                const payload = {
-                    participants: splitState.participants.map(p => ({
-                        name: (p.name || '').trim()
-                    })),
-                    notes: splitNoteInput.value.trim() || null
-                };
-
-                if (splitState.mode === 'percentage') {
-                    payload.participants.forEach((entry, index) => {
-                        const participant = splitState.participants[index];
-                        entry.percentage = participant.percentage ?? null;
-                    });
-                }
-
-                if (splitState.mode === 'items') {
-                    payload.participants.forEach(entry => {
-                        entry.itemKeys = [];
-                    });
-
-                    itemAssignmentsMap.forEach((participantId, itemId) => {
-                        const idx = splitState.participants.findIndex(p => p.id === participantId);
-                        if (idx >= 0) {
-                            payload.participants[idx].itemKeys.push(itemId);
-                        }
-                    });
-                }
-
-                return payload;
-            }
-
-            splitModeOptions.querySelectorAll('label.split-option').forEach(label => {
-                const input = label.querySelector('input[type="radio"]');
-                input.addEventListener('change', () => {
-                    if (input.checked) {
-                        splitModeOptions.querySelectorAll('label.split-option').forEach(l => l.classList.remove('active'));
-                        label.classList.add('active');
-                        onModeChanged(input.value);
-                    }
-                });
-            });
-
-            addParticipantBtn.addEventListener('click', () => {
-                splitState.participants.push(createParticipant(''));
-                renderParticipants();
-                refreshItemAssignmentOptions();
-                updateSummary();
-            });
-
-            splitNoteInput.addEventListener('input', () => {
-                splitState.notes = splitNoteInput.value;
-            });
-
-            if (invoiceToggle && invoiceDetails) {
-                invoiceToggle.addEventListener('change', () => {
-                    invoiceDetails.classList.toggle('d-none', !invoiceToggle.checked);
-                });
-            }
-
-            checkoutForm.addEventListener('submit', () => {
-                splitPayloadInput.value = JSON.stringify(buildPayload());
+            function disableSubmitButton() {
                 const btn = document.querySelector('.btn-place-order');
                 if (btn) {
                     btn.disabled = true;
                     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang xử lý...';
                 }
+            }
+
+            if (!form || !participantList || !splitInput || !addButton || !itemDistribution || !itemHeaderRow || !itemBody) {
+                if (form) {
+                    form.addEventListener('submit', disableSubmitButton);
+                }
+                return;
+            }
+
+            const state = {
+                mode: 'full',
+                participants: [],
+                remainingPayerId: null
+            };
+
+            let participantCounter = 1;
+            let currentDefaultMethod = getDefaultPaymentMethod();
+
+            function getDefaultPaymentMethod() {
+                const selected = document.querySelector('input[name="paymentMethod"]:checked');
+                return selected ? selected.value : 'cash';
+            }
+
+            function createParticipant() {
+                return {
+                    id: `guest-${participantCounter++}`,
+                    name: '',
+                    method: currentDefaultMethod,
+                    percentage: 0,
+                    paysRemaining: false,
+                    items: {}
+                };
+            }
+
+            function ensureParticipants() {
+                if (state.participants.length === 0) {
+                    state.participants.push(createParticipant());
+                }
+
+                if (state.mode === 'full' && state.participants.length > 1) {
+                    state.participants = [state.participants[0]];
+                }
+
+                if (state.mode === 'full') {
+                    state.participants[0].paysRemaining = true;
+                    state.remainingPayerId = state.participants[0].id;
+                } else if (state.mode !== 'by-item') {
+                    state.remainingPayerId = null;
+                    state.participants.forEach(p => p.paysRemaining = false);
+                } else {
+                    if (!state.remainingPayerId || !state.participants.some(p => p.id === state.remainingPayerId)) {
+                        state.remainingPayerId = state.participants[0]?.id ?? null;
+                    }
+                    state.participants.forEach(p => {
+                        p.paysRemaining = p.id === state.remainingPayerId;
+                        if (!p.items) {
+                            p.items = {};
+                        }
+                    });
+                }
+
+                if (state.mode === 'percentage') {
+                    normalizePercentages();
+                } else {
+                    state.participants.forEach(p => {
+                        p.percentage = state.mode === 'full' ? 100 : 0;
+                    });
+                }
+            }
+
+            function normalizePercentages() {
+                const count = state.participants.length;
+                if (count === 0) {
+                    return;
+                }
+
+                let remaining = 100;
+                state.participants.forEach((p, index) => {
+                    if (index === count - 1) {
+                        p.percentage = Math.max(0, Math.round(remaining * 100) / 100);
+                    } else {
+                        const share = Math.round((100 / count) * 100) / 100;
+                        p.percentage = share;
+                        remaining -= share;
+                    }
+                });
+            }
+
+            function addParticipant() {
+                const participant = createParticipant();
+                if (state.mode === 'by-item' && state.participants.length === 0) {
+                    participant.paysRemaining = true;
+                    state.remainingPayerId = participant.id;
+                }
+                state.participants.push(participant);
+                if (state.mode === 'percentage') {
+                    normalizePercentages();
+                }
+                renderParticipants();
+            }
+
+            function removeParticipant(id) {
+                state.participants = state.participants.filter(p => p.id !== id);
+                if (state.mode === 'by-item' && state.remainingPayerId === id) {
+                    state.remainingPayerId = state.participants[0]?.id ?? null;
+                }
+                ensureParticipants();
+                renderParticipants();
+            }
+
+            function escapeHtml(value) {
+                return String(value ?? '').replace(/[&<>"']/g, ch => ({
+                    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+                })[ch] || ch);
+            }
+
+            function renderParticipants() {
+                ensureParticipants();
+                participantList.innerHTML = '';
+                const showPercentage = state.mode === 'percentage';
+                const showRemaining = state.mode === 'by-item';
+                const canRemove = state.mode !== 'full';
+
+                state.participants.forEach(participant => {
+                    const card = document.createElement('div');
+                    card.className = 'participant-card';
+                    const nameFieldId = `participant-name-${participant.id}`;
+                    const methodFieldId = `participant-method-${participant.id}`;
+
+                    card.innerHTML = `
+                        <div class="participant-main">
+                            <div class="row g-2 align-items-end">
+                                <div class="col-sm-4">
+                                    <label class="form-label" for="${nameFieldId}">Tên hiển thị</label>
+                                    <input type="text" class="form-control" id="${nameFieldId}" value="${participant.name ?? ''}" placeholder="Ví dụ: Anh A">
+                                </div>
+                                <div class="col-sm-4">
+                                    <label class="form-label" for="${methodFieldId}">Phương thức</label>
+                                    <select class="form-select" id="${methodFieldId}">
+                                        <option value="cash">Tiền mặt</option>
+                                        <option value="card">Thẻ</option>
+                                        <option value="momo">MoMo</option>
+                                    </select>
+                                </div>
+                                ${showPercentage ? `<div class="col-sm-3">
+                                    <label class="form-label">Tỷ lệ (%)</label>
+                                    <input type="number" class="form-control" min="0" max="100" step="1" value="${participant.percentage ?? 0}" data-role="percentage-input">
+                                </div>` : ''}
+                                <div class="col-sm-1 d-flex justify-content-end">
+                                    ${canRemove && state.participants.length > 1 ? `<button type="button" class="btn btn-link text-danger p-0" data-role="remove-participant" title="Xoá">
+                                        <i class="fas fa-times"></i>
+                                    </button>` : ''}
+                                </div>
+                            </div>
+                        </div>
+                        ${showRemaining ? `<div class="participant-extra">
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="radio" name="remainingPayer" value="${participant.id}" ${participant.paysRemaining ? 'checked' : ''}>
+                                <label class="form-check-label">Trả phần còn lại</label>
+                            </div>
+                        </div>` : ''}
+                    `;
+
+                    const nameInput = card.querySelector(`#${nameFieldId}`);
+                    const methodSelect = card.querySelector(`#${methodFieldId}`);
+                    if (nameInput) {
+                        nameInput.addEventListener('input', () => {
+                            participant.name = nameInput.value;
+                            updateHiddenInput();
+                        });
+                    }
+                    if (methodSelect) {
+                        methodSelect.value = participant.method ?? currentDefaultMethod;
+                        methodSelect.addEventListener('change', () => {
+                            participant.method = methodSelect.value;
+                            updateHiddenInput();
+                        });
+                    }
+                    const percentageInput = card.querySelector('[data-role="percentage-input"]');
+                    if (percentageInput) {
+                        percentageInput.addEventListener('input', () => {
+                            const value = Number.parseFloat(percentageInput.value);
+                            participant.percentage = Number.isFinite(value) ? value : 0;
+                            updateHiddenInput();
+                        });
+                    }
+                    const removeBtn = card.querySelector('[data-role="remove-participant"]');
+                    if (removeBtn) {
+                        removeBtn.addEventListener('click', () => removeParticipant(participant.id));
+                    }
+                    const remainingRadio = card.querySelector('input[name="remainingPayer"]');
+                    if (remainingRadio) {
+                        remainingRadio.addEventListener('change', () => {
+                            state.remainingPayerId = participant.id;
+                            state.participants.forEach(p => p.paysRemaining = p.id === participant.id);
+                            updateHiddenInput();
+                        });
+                    }
+
+                    participantList.appendChild(card);
+                });
+
+                addButton.disabled = state.mode === 'full' && state.participants.length >= 1;
+                renderItemDistribution();
+                updateHiddenInput();
+            }
+
+            function renderItemDistribution() {
+                if (state.mode !== 'by-item' || state.participants.length === 0) {
+                    itemDistribution.hidden = true;
+                    itemHeaderRow.innerHTML = '';
+                    itemBody.innerHTML = '';
+                    return;
+                }
+
+                itemDistribution.hidden = false;
+                itemHeaderRow.innerHTML = '<th>Món</th><th>Số lượng</th>' + state.participants.map(p => `<th>${escapeHtml(p.name || 'Khách')}</th>`).join('');
+                itemBody.innerHTML = '';
+
+                cartItems.forEach(item => {
+                    const row = document.createElement('tr');
+                    const infoCell = document.createElement('td');
+                    infoCell.innerHTML = `<div class="split-item-name">${escapeHtml(item.name)}</div>${Array.isArray(item.options) && item.options.length ? `<div class="split-item-options text-muted">${item.options.map(o => `${escapeHtml(o.group)}: ${escapeHtml(o.name)}`).join('<br>')}</div>` : ''}`;
+                    row.appendChild(infoCell);
+
+                    const qtyCell = document.createElement('td');
+                    qtyCell.textContent = item.quantity;
+                    row.appendChild(qtyCell);
+
+                    state.participants.forEach(participant => {
+                        if (!participant.items) {
+                            participant.items = {};
+                        }
+                        const cell = document.createElement('td');
+                        const input = document.createElement('input');
+                        input.type = 'number';
+                        input.min = '0';
+                        input.max = String(item.quantity);
+                        input.step = '1';
+                        input.value = participant.items[item.id] ?? 0;
+                        input.className = 'form-control form-control-sm';
+                        input.addEventListener('input', () => {
+                            const value = Number.parseInt(input.value, 10);
+                            if (Number.isFinite(value) && value > 0) {
+                                participant.items[item.id] = Math.min(value, item.quantity);
+                            } else {
+                                delete participant.items[item.id];
+                            }
+                            updateHiddenInput();
+                        });
+                        cell.appendChild(input);
+                        row.appendChild(cell);
+                    });
+
+                    itemBody.appendChild(row);
+                });
+            }
+
+            function updateHiddenInput() {
+                const payload = {
+                    mode: state.mode,
+                    participants: state.participants.map((participant, index) => {
+                        const entry = {
+                            id: participant.id,
+                            name: participant.name?.trim() || null,
+                            paymentMethod: participant.method || currentDefaultMethod
+                        };
+
+                        if (state.mode === 'percentage') {
+                            entry.percentage = Number.isFinite(participant.percentage) ? participant.percentage : 0;
+                        }
+                        if (state.mode === 'full') {
+                            entry.paysRemaining = index === 0;
+                        }
+                        if (state.mode === 'by-item') {
+                            entry.paysRemaining = state.remainingPayerId ? participant.id === state.remainingPayerId : index === 0;
+                            const items = Object.entries(participant.items || {})
+                                .map(([itemId, quantity]) => ({
+                                    cartItemId: Number(itemId),
+                                    quantity: Number(quantity)
+                                }))
+                                .filter(it => Number.isFinite(it.quantity) && it.quantity > 0);
+                            if (items.length) {
+                                entry.items = items;
+                            }
+                        }
+                        return entry;
+                    })
+                };
+
+                splitInput.value = payload.participants.length > 0 ? JSON.stringify(payload) : '';
+            }
+
+            document.querySelectorAll('input[name="splitMode"]').forEach(radio => {
+                radio.addEventListener('change', () => {
+                    if (!radio.checked) {
+                        return;
+                    }
+                    state.mode = radio.value;
+                    ensureParticipants();
+                    renderParticipants();
+                });
             });
 
-            splitState.participants.push(createParticipant('Tôi'));
-            renderParticipants();
-            renderItemAssignments();
-            updateSummary();
+            document.querySelectorAll('input[name="paymentMethod"]').forEach(radio => {
+                radio.addEventListener('change', () => {
+                    const newDefault = getDefaultPaymentMethod();
+                    state.participants.forEach(p => {
+                        if (p.method === currentDefaultMethod) {
+                            p.method = newDefault;
+                        }
+                    });
+                    currentDefaultMethod = newDefault;
+                    renderParticipants();
+                });
+            });
+
+            addButton.addEventListener('click', () => addParticipant());
+
+            form.addEventListener('submit', () => {
+                updateHiddenInput();
+                disableSubmitButton();
+            });
+
+            addParticipant();
         })();
     </script>
 }
+
