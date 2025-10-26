@@ -101,10 +101,12 @@
             <div id="combo-section" class="row g-4">
                 @foreach (var combo in Model.Combos)
                 {
+                    var comboOutOfStock = combo.ComboDetails == null || combo.ComboDetails.Any(cd =>
+                        cd.FoodItem == null || !cd.FoodItem.IsAvailable || cd.FoodItem.StockQuantity <= 0);
                     <div class="col-md-4 col-lg-3">
                         <a href="@Url.Action("Detail", "Food", new { tableCode = tableCode, slug = combo.Slug })"
                            style="text-decoration: none;"
-                           class="menu-item-card combo-card"
+                           class="menu-item-card combo-card@(comboOutOfStock ? " out-of-stock" : string.Empty)"
                            data-category="@string.Join(",", combo.ComboDetails!.Select(cd => cd.FoodItem!.CategoryId).Distinct())">
                             <!-- Ảnh combo -->
                             @* <img src="@Url.Content(!string.IsNullOrEmpty(combo.ImageUrl) ? combo.ImageUrl : "~/images/no-image.png")"
@@ -114,6 +116,10 @@
 
                             <div class="menu-item-image-wrapper">
                                 <div class="food-image">
+                                    @if (comboOutOfStock)
+                                    {
+                                        <span class="stock-badge">Hết hàng</span>
+                                    }
                                     <img src="@Url.Content(!string.IsNullOrEmpty(combo.ImageUrl) ? combo.ImageUrl : "~/images/no-image.png")"
                                          alt="@combo.ComboName"
                                          class="menu-item-image">
@@ -173,6 +179,13 @@
                                         <span class="price">@combo.ComboPrice.ToString("N0") VNĐ</span>
                                     }
                                 </div>
+                                @if (comboOutOfStock)
+                                {
+                                    <div class="stock-message">
+                                        <i class="bi bi-exclamation-triangle-fill"></i>
+                                        Combo tạm thời có món hết hàng
+                                    </div>
+                                }
                             </div>
                         </a>
                     </div>
@@ -250,10 +263,15 @@
                 @* Kiểu 2 *@
                 @foreach (var food in Model.FoodItems)
                 {
+                    var foodOutOfStock = !food.IsAvailable || food.StockQuantity <= 0;
                     <div class="col-md-4 col-lg-3">
-                        <a href="@Url.Action("Detail", "Food", new { tableCode = tableCode, slug = food.Slug })" style="text-decoration: none;" class="menu-item-card" data-category="@food.CategoryId">
+                        <a href="@Url.Action("Detail", "Food", new { tableCode = tableCode, slug = food.Slug })" style="text-decoration: none;" class="menu-item-card@(foodOutOfStock ? " out-of-stock" : string.Empty)" data-category="@food.CategoryId">
                             <div class="menu-item-image-wrapper">
 
+                                @if (foodOutOfStock)
+                                {
+                                    <span class="stock-badge">Hết hàng</span>
+                                }
                                 <img src="@Url.Content(food.ImageUrl)" alt="@food.Name" class="menu-item-image">
                                 @if (food.DiscountPercent > 0)
                                 {
@@ -299,6 +317,13 @@
                                         <span class="price">@food.BasePrice.ToString("N0") VNĐ</span>
                                     }
                                 </div>
+                                @if (foodOutOfStock)
+                                {
+                                    <div class="stock-message">
+                                        <i class="bi bi-exclamation-triangle-fill"></i>
+                                        Món ăn hiện đã hết hàng
+                                    </div>
+                                }
                             </div>
                         </a>
                     </div>
