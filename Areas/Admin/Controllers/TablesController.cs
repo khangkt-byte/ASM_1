@@ -81,13 +81,6 @@ namespace ASM_1.Areas.Admin.Controllers
                 ViewBag.MergeGroup = group;
             }
 
-            if (table.DynamicPriceFactor.HasValue)
-            {
-                ViewBag.DynamicPriceFactor = table.DynamicPriceFactor;
-                ViewBag.DynamicPriceLabel = table.DynamicPriceLabel;
-                ViewBag.DynamicPriceValidUntil = table.DynamicPriceValidUntil;
-            }
-
             string filePath = Path.Combine(_env.WebRootPath, "uploads", "qr", $"table_{id}.png");
             bool exists = System.IO.File.Exists(filePath);
 
@@ -234,7 +227,7 @@ namespace ASM_1.Areas.Admin.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create([Bind("TableId,TableName,SeatCount,DynamicPriceFactor,DynamicPriceValidUntil,DynamicPriceLabel")] Table table)
+        public async Task<IActionResult> Create([Bind("TableId,TableName,SeatCount")] Table table)
         {
             if (ModelState.IsValid)
             {
@@ -263,7 +256,7 @@ namespace ASM_1.Areas.Admin.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, [Bind("TableId,TableName,SeatCount,DynamicPriceFactor,DynamicPriceValidUntil,DynamicPriceLabel")] Table table)
+        public async Task<IActionResult> Edit(int id, [Bind("TableId,TableName,SeatCount")] Table table)
         {
             if (id != table.TableId)
             {

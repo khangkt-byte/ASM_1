@@ -24,37 +24,6 @@ namespace ASM_1.Services
             return decimal.Round(item.BasePrice, 0, MidpointRounding.AwayFromZero);
         }
 
-        public static bool TryGetDynamicFactor(Table? table, DateTime now, out decimal factor, out string? label)
-        {
-            factor = 1m;
-            label = null;
-
-            if (table?.DynamicPriceFactor is decimal value && value > 0)
-            {
-                if (!table.DynamicPriceValidUntil.HasValue || table.DynamicPriceValidUntil.Value >= now)
-                {
-                    factor = value;
-                    label = string.IsNullOrWhiteSpace(table.DynamicPriceLabel)
-                        ? $"Giá động áp dụng tại {table.TableName}"
-                        : table.DynamicPriceLabel;
-                    return true;
-                }
-            }
-
-            return false;
-        }
-
-        public static decimal ApplyDynamicFactor(decimal baseAmount, decimal? factor)
-        {
-            if (!factor.HasValue || factor.Value <= 0)
-            {
-                return decimal.Round(baseAmount, 0, MidpointRounding.AwayFromZero);
-            }
-
-            var calculated = baseAmount * factor.Value;
-            return decimal.Round(calculated, 0, MidpointRounding.AwayFromZero);
-        }
-
         public static decimal CalculateComboPrice(Combo combo)
         {
             if (combo.ComboDetails == null || combo.ComboDetails.Count == 0)

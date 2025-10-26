@@ -43,8 +43,6 @@ namespace ASM_1.Controllers
             string userId = _userSessionService.GetOrCreateUserSessionId(tableCode);
             var cart = await GetCartAsync(userId);
 
-            await PopulateDynamicPricingBannerAsync(tableId.Value);
-
             return View(cart.CartItems);
         }
 
@@ -79,8 +77,6 @@ namespace ASM_1.Controllers
                 TempData["ErrorMessage"] = "Giỏ hàng của bạn đang trống.";
                 return RedirectToAction("Index", new { tableCode });
             }
-
-            await PopulateDynamicPricingBannerAsync(tableId.Value);
 
             if (TempData.ContainsKey("DiscountError"))
             {
@@ -440,24 +436,11 @@ namespace ASM_1.Controllers
             quantity = Math.Clamp(quantity, 1, 10);
 
             var tableId = _tableCodeService.DecryptTableCode(tableCode);
-            Table? table = null;
-            decimal? dynamicFactor = null;
-            if (tableId.HasValue)
-            {
-                table = await _context.Tables.AsNoTracking().FirstOrDefaultAsync(t => t.TableId == tableId.Value);
-                if (table != null && PricingHelper.TryGetDynamicFactor(table, DateTime.UtcNow, out var factor, out _))
-                {
-                    dynamicFactor = factor;
-                }
-            }
-
             var (resolvedOptions, optionsTotal) = await ResolveSelectedOptionsAsync(id, selectionsJson, selectedOptionIds);
 
             decimal basePrice = PricingHelper.CalculateEffectiveBasePrice(foodItem);
             decimal priceBeforeDynamic = basePrice + optionsTotal;
-            decimal finalUnitPrice = dynamicFactor.HasValue && dynamicFactor.Value > 0 && dynamicFactor.Value != 1m
-                ? PricingHelper.ApplyDynamicFactor(priceBeforeDynamic, dynamicFactor)
-                : priceBeforeDynamic;
+            decimal finalUnitPrice = priceBeforeDynamic;
 
             string userId = _userSessionService.GetOrCreateUserSessionId(tableCode);
             var cart = await GetCartAsync(userId);
@@ -483,7 +466,6 @@ namespace ASM_1.Controllers
             var optionSignature = BuildOptionSignature(resolvedOptions);
             var sameItem = cart.CartItems.FirstOrDefault(i =>
                 i.ProductID == id &&
-                Nullable.Equals(i.AppliedDynamicFactor, dynamicFactor) &&
                 string.Equals((i.Note ?? string.Empty).Trim(), normalizedNote, StringComparison.OrdinalIgnoreCase) &&
                 BuildOptionSignature(i.Options ?? new List<CartItemOption>()) == optionSignature);
 
@@ -500,7 +482,6 @@ namespace ASM_1.Controllers
                     OptionsTotal = optionsTotal,
                     UnitPrice = finalUnitPrice,
                     TotalPrice = finalUnitPrice * quantity,
-                    AppliedDynamicFactor = dynamicFactor,
                     Options = resolvedOptions.Select(opt => new CartItemOption
                     {
                         OptionTypeName = opt.OptionTypeName,
@@ -569,19 +550,6 @@ namespace ASM_1.Controllers
 
             await _context.SaveChangesAsync();
             return RedirectToAction(nameof(Index), new { tableCode });
-        }
-
-        private async Task PopulateDynamicPricingBannerAsync(int tableId)
-        {
-            var table = await _context.Tables.AsNoTracking().FirstOrDefaultAsync(t => t.TableId == tableId);
-            if (table == null) return;
-
-            if (PricingHelper.TryGetDynamicFactor(table, DateTime.UtcNow, out var factor, out var label))
-            {
-                ViewBag.DynamicPricingLabel = label;
-                ViewBag.DynamicPriceFactor = factor;
-                ViewBag.TableName = table.TableName;
-            }
         }
 
         private async Task<(List<CartItemOption> Options, decimal OptionsTotal)> ResolveSelectedOptionsAsync(int foodItemId, string? selectionsJson, int[]? legacyOptionIds)
