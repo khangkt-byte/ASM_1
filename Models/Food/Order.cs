@@ -37,6 +37,8 @@ namespace ASM_1.Models.Food
         public int InvoiceId { get; set; }
         public Invoice Invoice { get; set; } = default!;
 
+        public PaymentSession? PaymentSession { get; set; }
+
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
