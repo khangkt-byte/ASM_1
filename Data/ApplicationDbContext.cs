@@ -194,7 +194,8 @@ namespace ASM_1.Data
                 .HasOne(o => o.Invoice)
                 .WithOne()
                 .HasForeignKey<Order>(o => o.InvoiceId)
-                .OnDelete(DeleteBehavior.Cascade);
+                // Avoid multiple cascading paths when combined with OrderItem.Invoice
+                .OnDelete(DeleteBehavior.Restrict);
 
             builder.Entity<Order>()
                 .HasOne(o => o.Table)
