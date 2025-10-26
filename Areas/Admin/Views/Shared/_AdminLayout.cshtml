@@ -31,6 +31,8 @@
     {
         userAvatar = Url.Content("~/" + avatarClaim.TrimStart('/'));
     }
+    var displayName = string.IsNullOrWhiteSpace(username) ? "Tài khoản" : username;
+    var displayRole = string.IsNullOrWhiteSpace(userRole) ? "Người dùng" : userRole;
 }
 
 <!DOCTYPE html>
@@ -54,8 +56,8 @@
     @RenderSection("Styles", required: false)
 </head>
 <body class="admin-body">
-    <nav class="site-nav">
-        <button class="sidebar-toggle" type="button" aria-label="Toggle sidebar">
+    <nav class="site-nav" aria-label="Điều hướng quản trị">
+        <button class="sidebar-toggle" type="button" aria-label="Hiển thị thanh điều hướng">
             <span class="material-symbols-rounded">menu</span>
         </button>
     </nav>
@@ -64,10 +66,10 @@
         <aside class="sidebar admin-sidebar collapsed">
             <div class="sidebar-header">
                 <div class="admin-logo">
-                    <img src="~/Images/Food-logo.jpg" alt="Logo" class="header-logo">
+                    <img src="~/Images/Food-logo.jpg" alt="Logo hệ thống" class="header-logo">
                     <span class="brand-text">Manage Panel</span>
                 </div>
-                <button class="sidebar-toggle" type="button" aria-label="Collapse sidebar">
+                <button class="sidebar-toggle" type="button" aria-label="Thu gọn thanh điều hướng">
                     <span class="material-symbols-rounded">chevron_left</span>
                 </button>
             </div>
@@ -209,19 +211,19 @@
                 </button>
 
                 <div class="admin-profile">
-                    <img src="@userAvatar" alt="Admin Avatar">
+                    <img src="@userAvatar" alt="Ảnh quản trị viên">
                     <div class="profile-info">
-                        <span class="admin-name">@username</span>
-                        <span class="admin-role">@userRole</span>
+                        <span class="admin-name">@displayName</span>
+                        <span class="admin-role">@displayRole</span>
                     </div>
                 </div>
             </div>
         </aside>
 
-        <main class="main-content">
+        <main class="main-content" role="main">
             <header class="admin-header">
                 <div class="header-left">
-                    <button class="sidebar-toggle" type="button" aria-label="Toggle sidebar">
+                    <button class="sidebar-toggle" type="button" aria-label="Hiển thị thanh điều hướng">
                         <span class="material-symbols-rounded">menu</span>
                     </button>
                     <div class="breadcrumb">
@@ -239,8 +241,8 @@
                         <button class="user-dropdown-toggle" type="button" aria-haspopup="true" aria-expanded="false">
                             <img src="@userAvatar" alt="Avatar" class="user-avatar">
                             <div class="user-info">
-                                <span class="user-name">@username</span>
-                                <span class="user-role">@userRole</span>
+                                <span class="user-name">@displayName</span>
+                                <span class="user-role">@displayRole</span>
                             </div>
                             <i class="fas fa-chevron-down" aria-hidden="true"></i>
                         </button>
@@ -248,8 +250,8 @@
                         <div class="user-dropdown-menu" role="menu">
                             <div class="user-dropdown-header">
                                 <div>
-                                    <strong>@username</strong>
-                                    <span>@userRole</span>
+                                    <strong>@displayName</strong>
+                                    <span>@displayRole</span>
                                 </div>
                             </div>
 

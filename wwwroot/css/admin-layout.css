@@ -1,33 +1,41 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
 :root {
     --color-text-primary: #1F2936;
-    --color-text-secondary: #4B5565;
     --color-text-placeholder: #798EAE;
     --color-bg-primary: #f9fafb;
     --color-bg-secondary: #ECECFD;
     --color-bg-sidebar: #FFFFFF;
-    --color-border: #E2E8F0;
+    --color-border-hr: #E2E8F0;
     --color-hover-primary: #695CFE;
     --color-hover-secondary: #e2e2fb;
-    --color-shadow: rgba(15, 23, 42, 0.08);
+    --color-shadow: rgba(0, 0, 0, 0.05);
 }
 
 body.dark-theme {
     --color-text-primary: #F1F5F9;
-    --color-text-secondary: #CBD5F5;
     --color-text-placeholder: #A6B7D2;
     --color-bg-primary: #111827;
     --color-bg-secondary: #3D4859;
     --color-bg-sidebar: #1f2937;
-    --color-border: #3B475C;
+    --color-border-hr: #3B475C;
     --color-hover-secondary: #48566a;
     --color-shadow: rgba(0, 0, 0, 0.3);
 }
 
-.admin-body {
-    margin: 0;
+body {
     min-height: 100vh;
     background: var(--color-bg-primary);
-    font-family: 'Inter', sans-serif;
+    font-family: 'Poppins', 'Inter', sans-serif;
+}
+
+.admin-body {
     color: var(--color-text-primary);
 }
 
@@ -37,8 +45,8 @@ body.dark-theme {
     padding: 15px 20px;
     position: sticky;
     background: var(--color-bg-primary);
-    border-bottom: 1px solid var(--color-border);
-    z-index: 50;
+    border-bottom: 1px solid var(--color-border-hr);
+    z-index: 40;
 }
 
 .admin-body .site-nav .sidebar-toggle {
@@ -47,7 +55,6 @@ body.dark-theme {
 
 .admin-body .admin-container {
     display: flex;
-    align-items: stretch;
 }
 
 .admin-body .sidebar {
@@ -56,12 +63,12 @@ body.dark-theme {
     width: 270px;
     height: 100vh;
     display: flex;
-    flex-direction: column;
     flex-shrink: 0;
+    flex-direction: column;
     background: var(--color-bg-sidebar);
-    border-right: 1px solid var(--color-border);
+    border-right: 1px solid var(--color-border-hr);
     box-shadow: 0 3px 9px var(--color-shadow);
-    transition: width 0.4s ease, transform 0.4s ease;
+    transition: width 0.4s ease;
 }
 
 .admin-body .sidebar.collapsed {
@@ -71,23 +78,24 @@ body.dark-theme {
 .admin-body .sidebar .sidebar-header {
     padding: 20px 18px;
     display: flex;
+    position: relative;
     align-items: center;
     justify-content: space-between;
-    border-bottom: 1px solid var(--color-border);
-    position: relative;
+    border-bottom: 1px solid var(--color-border-hr);
 }
 
 .admin-body .sidebar-header .admin-logo {
     display: flex;
-    align-items: center;
     gap: 12px;
+    align-items: center;
 }
 
 .admin-body .sidebar-header .header-logo {
     width: 46px;
     height: 46px;
+    display: block;
+    object-fit: contain;
     border-radius: 50%;
-    object-fit: cover;
     transition: opacity 0.4s ease;
 }
 
@@ -99,7 +107,6 @@ body.dark-theme {
 .admin-body .sidebar-header .admin-logo span {
     font-size: 1.1rem;
     font-weight: 600;
-    color: var(--color-text-primary);
     white-space: nowrap;
     transition: opacity 0.3s ease;
 }
@@ -206,8 +213,9 @@ body.dark-theme {
 .admin-body .menu-list {
     list-style: none;
     display: flex;
+    gap: 4px;
+    list-style: none;
     flex-direction: column;
-    gap: 6px;
 }
 
 .admin-body .menu-section {
@@ -232,11 +240,10 @@ body.dark-theme {
 .admin-body .menu-link {
     display: flex;
     gap: 12px;
-    align-items: center;
-    width: 100%;
+    white-space: nowrap;
     border-radius: 8px;
     padding: 12px 15px;
-    white-space: nowrap;
+    align-items: center;
     text-decoration: none;
     color: var(--color-text-primary);
     transition: 0.3s ease;
@@ -277,10 +284,11 @@ body.dark-theme {
 
 .admin-body .sidebar-footer {
     padding: 20px 18px;
-    border-top: 1px solid var(--color-border);
+    white-space: nowrap;
+    border-top: 1px solid var(--color-border-hr);
     display: flex;
     flex-direction: column;
-    gap: 18px;
+    gap: 16px;
 }
 
 .admin-body .theme-toggle {
@@ -292,6 +300,7 @@ body.dark-theme {
     cursor: pointer;
     border: none;
     padding: 0 15px;
+    white-space: nowrap;
     color: var(--color-text-primary);
     background: var(--color-bg-secondary);
     transition: 0.3s ease;
@@ -309,14 +318,14 @@ body.dark-theme {
 
 .admin-body .theme-toggle .theme-text {
     font-size: 1rem;
-    transition: opacity 0.4s ease;
+    transition: opacity 0.4s 0.2s ease;
 }
 
 .admin-body .sidebar.collapsed .theme-toggle .theme-text,
 .admin-body .sidebar.collapsed .theme-toggle .theme-toggle-track {
     opacity: 0;
     width: 0;
-    transition: opacity 0.2s ease, width 0.2s ease;
+    transition: all 0.2s ease;
 }
 
 .admin-body .theme-toggle-track {
@@ -326,7 +335,7 @@ body.dark-theme {
     margin-left: auto;
     background: #c3d1ec;
     position: relative;
-    transition: background-color 0.3s ease;
+    transition: opacity 0.4s 0.2s ease, background-color 0.3s ease;
 }
 
 body.dark-theme .theme-toggle-track {
@@ -351,9 +360,11 @@ body.dark-theme .theme-toggle-indicator {
 
 .admin-body .admin-profile {
     display: flex;
-    gap: 12px;
     align-items: center;
-    white-space: nowrap;
+    gap: 12px;
+    padding: 12px 15px;
+    border-radius: 8px;
+    background: var(--color-bg-secondary);
 }
 
 .admin-body .admin-profile img {
@@ -361,19 +372,17 @@ body.dark-theme .theme-toggle-indicator {
     height: 44px;
     border-radius: 50%;
     object-fit: cover;
-    flex-shrink: 0;
 }
 
 .admin-body .profile-info {
     display: flex;
     flex-direction: column;
-    gap: 2px;
+    gap: 4px;
 }
 
 .admin-body .admin-name {
     font-size: 0.95rem;
     font-weight: 600;
-    color: var(--color-text-primary);
 }
 
 .admin-body .admin-role {
@@ -388,11 +397,11 @@ body.dark-theme .theme-toggle-indicator {
 
 .admin-body .main-content {
     flex: 1;
+    padding: 30px;
+    min-width: 0;
     display: flex;
     flex-direction: column;
-    background: transparent;
-    min-height: 100vh;
-    transition: margin 0.4s ease;
+    color: var(--color-text-primary);
 }
 
 .admin-body .admin-header {
@@ -400,44 +409,39 @@ body.dark-theme .theme-toggle-indicator {
     padding: 18px 28px;
     border-bottom: 1px solid var(--color-border);
     display: flex;
-    justify-content: space-between;
     align-items: center;
-    position: sticky;
-    top: 0;
-    z-index: 10;
-    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.06);
+    justify-content: space-between;
+    padding-bottom: 20px;
+    margin-bottom: 20px;
+    border-bottom: 1px solid var(--color-border-hr);
 }
 
 .admin-body .header-left {
     display: flex;
-    gap: 16px;
     align-items: center;
+    gap: 18px;
 }
 
 .admin-body .breadcrumb span {
     font-size: 1.1rem;
     font-weight: 600;
-    color: var(--color-text-primary);
 }
 
 .admin-body .header-right {
     display: flex;
     align-items: center;
-    gap: 16px;
+    gap: 18px;
 }
 
 .admin-body .notification-btn {
     position: relative;
     border: none;
-    background: transparent;
+    background: var(--color-bg-secondary);
     color: var(--color-text-primary);
-    height: 42px;
-    width: 42px;
-    border-radius: 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: background 0.3s ease;
+    padding: 10px 12px;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: 0.3s ease;
 }
 
 .admin-body .notification-btn:hover {
@@ -446,8 +450,13 @@ body.dark-theme .theme-toggle-indicator {
 
 .admin-body .notification-badge {
     position: absolute;
-    top: 6px;
-    right: 6px;
+    top: -4px;
+    right: -4px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #f43f5e;
+    color: #fff;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -473,12 +482,12 @@ body.dark-theme .theme-toggle-indicator {
     align-items: center;
     gap: 12px;
     border: none;
-    background: transparent;
+    background: var(--color-bg-secondary);
     color: var(--color-text-primary);
-    cursor: pointer;
-    padding: 8px 12px;
+    padding: 8px 14px;
     border-radius: 12px;
-    transition: background 0.3s ease;
+    cursor: pointer;
+    transition: 0.3s ease;
 }
 
 .admin-body .user-dropdown-toggle:hover,
@@ -498,23 +507,31 @@ body.dark-theme .theme-toggle-indicator {
     flex-direction: column;
     align-items: flex-start;
     gap: 2px;
-    text-align: left;
+}
+
+.user-dropdown-toggle .user-name {
+    font-weight: 600;
+}
+
+.user-dropdown-toggle .user-role {
+    font-size: 0.85rem;
+    color: var(--color-text-placeholder);
 }
 
 .admin-body .user-dropdown-menu {
     position: absolute;
-    top: calc(100% + 12px);
+    top: calc(100% + 10px);
     right: 0;
-    min-width: 240px;
+    width: 220px;
+    padding: 12px;
     background: var(--color-bg-sidebar);
-    border-radius: 16px;
-    padding: 16px;
-    box-shadow: 0 15px 45px rgba(15, 23, 42, 0.12);
-    border: 1px solid var(--color-border);
-    opacity: 0;
-    visibility: hidden;
-    transform: translateY(-10px);
-    transition: opacity 0.25s ease, transform 0.25s ease;
+    border-radius: 12px;
+    border: 1px solid var(--color-border-hr);
+    box-shadow: 0 10px 30px rgba(15, 23, 42, 0.1);
+    display: none;
+    flex-direction: column;
+    gap: 6px;
+    z-index: 30;
 }
 
 .admin-body .user-dropdown:hover .user-dropdown-menu,
@@ -528,12 +545,10 @@ body.dark-theme .theme-toggle-indicator {
     display: flex;
     align-items: center;
     gap: 12px;
-    margin-bottom: 12px;
 }
 
 .admin-body .user-dropdown-header strong {
     font-size: 1rem;
-    color: var(--color-text-primary);
 }
 
 .admin-body .user-dropdown-header span {
@@ -544,21 +559,21 @@ body.dark-theme .theme-toggle-indicator {
 
 .admin-body .dropdown-divider {
     height: 1px;
-    background: var(--color-border);
-    margin: 12px 0;
+    width: 100%;
+    background: var(--color-border-hr);
+    margin: 6px 0;
 }
 
 .admin-body .user-dropdown-item {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 10px;
     padding: 10px 12px;
-    border-radius: 10px;
+    border-radius: 8px;
     color: var(--color-text-primary);
     text-decoration: none;
+    transition: 0.3s ease;
     font-size: 0.95rem;
-    margin: 0;
-    transition: background 0.2s ease, color 0.2s ease;
 }
 
 .admin-body .user-dropdown-item i {
@@ -585,10 +600,14 @@ body.dark-theme .theme-toggle-indicator {
     padding: 0;
     width: 100%;
     display: flex;
+    gap: 10px;
     align-items: center;
-    gap: 12px;
-    cursor: pointer;
+    border: none;
+    background: transparent;
+    color: inherit;
+    font: inherit;
     text-align: left;
+    cursor: pointer;
 }
 
 .admin-body .user-dropdown-item.logout-item button:hover,
@@ -615,14 +634,12 @@ body.dark-theme .theme-toggle-indicator {
         transition: 0.4s ease;
     }
 
-    body:has(.sidebar:not(.collapsed))::before,
-    body.sidebar-open::before {
+    body:has(.sidebar:not(.collapsed))::before {
         opacity: 1;
         pointer-events: auto;
     }
 
-    body:has(.sidebar:not(.collapsed)),
-    body.sidebar-open {
+    body:has(.sidebar:not(.collapsed)) {
         overflow: hidden;
     }
 
@@ -636,12 +653,12 @@ body.dark-theme .theme-toggle-indicator {
 
     .admin-body .sidebar {
         position: fixed;
-        left: 0;
         top: 0;
+        left: 0;
         height: 100%;
-        width: 270px;
         z-index: 20;
-        transform: translateX(-270px);
+        width: 270px;
+        transition: left 0.4s ease;
     }
 
     .admin-body .sidebar.collapsed {
@@ -666,11 +683,12 @@ body.dark-theme .theme-toggle-indicator {
 @media (max-width: 576px) {
     .admin-body .admin-header {
         flex-direction: column;
-        align-items: stretch;
+        align-items: flex-start;
         gap: 16px;
     }
 
     .admin-body .header-right {
         justify-content: space-between;
+        width: 100%;
     }
 }
