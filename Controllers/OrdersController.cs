@@ -88,16 +88,21 @@ namespace ASM_1.Controllers
 
             var sessionId = _userSessionService.GetOrCreateUserSessionId(tableCode);
 
-            var order = await _context.Orders
+            var baseQuery = _context.Orders
                 .AsNoTracking()
                 .Include(o => o.Items)
                     .ThenInclude(i => i.FoodItem)
                 .Include(o => o.Items)
                     .ThenInclude(i => i.Options)
-                .FirstOrDefaultAsync(o =>
+                .Where(o =>
                     o.OrderId == id &&
-                    o.TableId == tableId &&
-                    o.UserSessionId == sessionId);
+                    o.TableId == tableId);
+
+            var order = await baseQuery
+                .Where(o => o.UserSessionId == sessionId)
+                .FirstOrDefaultAsync();
+
+            order ??= await baseQuery.FirstOrDefaultAsync();
 
             if (order == null)
             {
