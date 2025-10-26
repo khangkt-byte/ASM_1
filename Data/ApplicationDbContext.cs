@@ -213,7 +213,7 @@ namespace ASM_1.Data
 
             builder.Entity<OrderItem>()
                 .HasOne(x => x.Invoice)
-                .WithMany()
+                .WithMany(i => i.OrderItems)
                 .HasForeignKey(x => x.InvoiceId)
                 .OnDelete(DeleteBehavior.Cascade);
 
@@ -222,12 +222,6 @@ namespace ASM_1.Data
                 .WithMany()
                 .HasForeignKey(x => x.FoodItemId)
                 .OnDelete(DeleteBehavior.Restrict);
-
-            builder.Entity<OrderItem>()
-                .HasOne(x => x.Order)
-                .WithMany(o => o.Items)
-                .HasForeignKey(x => x.OrderId)
-                .OnDelete(DeleteBehavior.Cascade);
 
             builder.Entity<Order>()
                 .HasIndex(o => o.OrderCode)
