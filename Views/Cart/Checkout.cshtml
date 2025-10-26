@@ -10,14 +10,16 @@
     var dynamicFactor = ViewBag.DynamicPriceFactor as decimal?;
     var lastDiscountCode = ViewBag.LastDiscountCode as string ?? string.Empty;
     var discountError = ViewBag.DiscountError as string;
-    var cartPayload = Model?.Select(item => new
+    var cartPayload = (Model ?? Enumerable.Empty<ASM_1.Models.Food.CartItem>()).Select(item => new
     {
         id = item.CartItemID,
         name = item.ProductName,
         quantity = item.Quantity,
         price = item.UnitPrice,
-        options = item.Options?.Select(o => new { group = o.OptionTypeName, name = o.OptionName }) ?? Array.Empty<object>()
-    }) ?? Array.Empty<object>();
+        options = item.Options == null
+            ? Array.Empty<object>()
+            : item.Options.Select(o => (object)new { group = o.OptionTypeName, name = o.OptionName }).ToArray()
+    });
     var cartItemsJson = JsonSerializer.Serialize(cartPayload, new JsonSerializerOptions
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
