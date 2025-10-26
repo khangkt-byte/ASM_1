@@ -215,7 +215,7 @@ namespace ASM_1.Data
                 .HasOne(x => x.Invoice)
                 .WithMany(i => i.OrderItems)
                 .HasForeignKey(x => x.InvoiceId)
-                .OnDelete(DeleteBehavior.Cascade);
+                .OnDelete(DeleteBehavior.SetNull);
 
             builder.Entity<OrderItem>()
                 .HasOne(x => x.FoodItem)
