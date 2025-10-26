@@ -512,6 +512,16 @@
               hubConnection.on('OrderUpdated', payload => {
                 if (!payload || typeof payload.id === 'undefined') return;
                 if (tableCode) {
+                  const existingOrder = currentOrders.find(o => o.id === payload.id);
+                  const previousStatus = (existingOrder?.status || '').toString().toLowerCase();
+                  const nextStatus = (payload.status || '').toString().toLowerCase();
+
+                  if (nextStatus === 'served' && previousStatus !== 'served') {
+                    if (typeof showNotification === 'function') {
+                      showNotification('Đơn hàng của bạn đã được phục vụ!', 'success');
+                    }
+                  }
+
                   upsertOrder(payload);
                 }
               });
