@@ -29,6 +29,8 @@ namespace ASM_1.Services
                     .ThenInclude(i => i.FoodItem)
                 .Include(o => o.Items)
                     .ThenInclude(i => i.Options)
+                .Include(o => o.Invoice)
+                    .ThenInclude(i => i.PaymentShares)
                 .FirstOrDefaultAsync(o => o.OrderId == orderId);
 
             if (order == null)
@@ -95,6 +97,17 @@ namespace ASM_1.Services
                     total = order.TotalAmount,
                     paymentMethod = order.PaymentMethod,
                     note = order.Note,
+                    paymentShares = order.Invoice?.PaymentShares
+                        .OrderBy(ps => ps.CreatedAt)
+                        .Select(ps => new
+                        {
+                            participantId = ps.ParticipantId,
+                            name = ps.DisplayName,
+                            method = ps.PaymentMethod,
+                            amount = ps.Amount,
+                            percentage = ps.Percentage
+                        })
+                        .ToList(),
                     items = order.Items
                         .OrderBy(i => i.CreatedAt)
                         .Select(i => new
