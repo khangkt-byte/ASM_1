@@ -1,7 +1,9 @@
-﻿@model ASM_1.Models.Food.Table
+@model ASM_1.Models.Food.Table
 
 @{
     ViewData["Title"] = "Chi tiết bàn - " + Model.TableName;
+    var mergeGroup = ViewBag.MergeGroup as ASM_1.Services.TableMergeGroupSnapshot;
+    var dynamicFactor = ViewBag.DynamicPriceFactor as decimal?;
 }
 
 <div class="container mt-4">
@@ -15,7 +17,6 @@
 
         <div class="card-body">
             <div class="row align-items-center">
-                <!-- Thông tin bàn -->
                 <div class="col-md-6">
                     <table class="table table-borderless">
                         <tr>
@@ -37,16 +38,49 @@
                                 {
                                     <span class="badge bg-success">Trống</span>
                                 }
+                                else if (Model.Status?.StartsWith("Merged") == true)
+                                {
+                                    <span class="badge bg-warning text-dark">@Model.Status</span>
+                                }
                                 else
                                 {
                                     <span class="badge bg-danger">Đầy</span>
                                 }
                             </td>
                         </tr>
+                        <tr>
+                            <th>Giá động:</th>
+                            <td>
+                                @if (dynamicFactor.HasValue)
+                                {
+                                    <span class="badge bg-info text-dark">x@dynamicFactor.Value.ToString("0.##")</span>
+                                    if (!string.IsNullOrWhiteSpace(ViewBag.DynamicPriceLabel as string))
+                                    {
+                                        <div class="small text-muted">@ViewBag.DynamicPriceLabel</div>
+                                    }
+                                    if (ViewBag.DynamicPriceValidUntil is DateTime until)
+                                    {
+                                        <div class="small text-muted">Hiệu lực đến: @until.ToString("dd/MM/yyyy HH:mm")</div>
+                                    }
+                                }
+                                else
+                                {
+                                    <span class="text-muted">Không áp dụng</span>
+                                }
+                            </td>
+                        </tr>
+                        @if (mergeGroup != null)
+                        {
+                            <tr>
+                                <th>Nhóm gộp:</th>
+                                <td>
+                                    Nhóm #@mergeGroup.GroupId - bàn: @string.Join(", ", mergeGroup.TableIds)
+                                </td>
+                            </tr>
+                        }
                     </table>
                 </div>
 
-                <!-- QR Code -->
                 <div class="col-md-6 text-center">
                     @if (ViewBag.QrExists)
                     {

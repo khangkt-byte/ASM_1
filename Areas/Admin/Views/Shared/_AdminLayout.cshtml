@@ -99,6 +99,9 @@
                         </a>
                     </div>
                 }
+                bool isChef = await UserManager.IsInRoleAsync(user, "Chef");
+                bool isCashier = await UserManager.IsInRoleAsync(user, "Cashier");
+
                 if (isAdmin || isFoodAdmin)
                 {
                     <div class="nav-section">
@@ -137,6 +140,34 @@
                         <a asp-controller="Discounts" asp-action="Index" class="nav-item">
                             <i class="fas fa-user-shield"></i>
                             <span>Quản lý giảm giá</span>
+                        </a>
+                    </div>
+                }
+
+                if (isChef)
+                {
+                    <div class="nav-section">
+                        <span class="section-title">
+                            <i class="fas fa-utensils"></i>
+                            Khu bếp
+                        </span>
+                        <a asp-area="Staff" asp-controller="Kitchen" asp-action="Index" class="nav-item">
+                            <i class="fas fa-fire"></i>
+                            <span>KDS - Đơn cần chế biến</span>
+                        </a>
+                    </div>
+                }
+
+                if (isCashier)
+                {
+                    <div class="nav-section">
+                        <span class="section-title">
+                            <i class="fas fa-cash-register"></i>
+                            Thu ngân
+                        </span>
+                        <a asp-area="Staff" asp-controller="Cashier" asp-action="Index" class="nav-item">
+                            <i class="fas fa-receipt"></i>
+                            <span>Quản lý đơn &amp; in hóa đơn</span>
                         </a>
                     </div>
                 }

@@ -28,6 +28,20 @@
             <p class="menu-subtitle">Khám phá những món ăn đặc sắc và hương vị tuyệt vời</p>
         </div>
 
+        @if (Model.DynamicPriceFactor.HasValue)
+        {
+            <div class="alert alert-info d-flex align-items-center gap-2">
+                <i class="bi bi-lightning-charge-fill"></i>
+                <span>
+                    Giá động x@Model.DynamicPriceFactor.Value.ToString("0.##")
+                    @if (!string.IsNullOrWhiteSpace(Model.DynamicPricingLabel))
+                    {
+                        @($"- {Model.DynamicPricingLabel}")
+                    }
+                </span>
+            </div>
+        }
+
         <!-- =================== CATEGORY BAR =================== -->
         <div class="menu-categories">
             <button class="active category-btn" data-category="0">
@@ -144,19 +158,17 @@
                                     <span class="rating-text">(4.8)</span>
                                 </div> *@
 
+                                @{ var comboHasOverride = Model.ComboPriceOverrides != null && Model.ComboPriceOverrides.TryGetValue(combo.ComboId, out var comboDynamicPrice); }
                                 <div class="price-section">
-                                    @* @if (combo.DiscountPrice > 0)
+                                    @if (comboHasOverride)
                                     {
-                                        <span class="old-price">@combo.BasePrice.ToString("N0") VNĐ</span>
-                                        <span class="price">
-                                            @((combo.BasePrice * (100 - combo.DiscountPercent) / 100).ToString("N0")) VNĐ
-                                        </span>
+                                        <span class="old-price">@combo.ComboPrice.ToString("N0") VNĐ</span>
+                                        <span class="price text-primary">@comboDynamicPrice.ToString("N0") VNĐ</span>
                                     }
                                     else
                                     {
-                                        <span class="price">@combo.BasePrice.ToString("N0") VNĐ</span>
-                                    } *@
-                                    <span class="price">@combo.ComboPrice.ToString("N0") VNĐ</span>
+                                        <span class="price">@combo.ComboPrice.ToString("N0") VNĐ</span>
+                                    }
                                 </div>
                             </div>
                         </a>
@@ -192,13 +204,22 @@
                                     <span class="stars">★★★★★</span>
                                     <span class="rating-text">(4.8)</span>
                                 </div>
+                                @{ var hasFoodOverride = Model.FoodPriceOverrides != null && Model.FoodPriceOverrides.TryGetValue(food.FoodItemId, out var foodDynamicPrice); var baseEffectivePrice = food.DiscountPrice > 0 ? food.DiscountPrice : (food.DiscountPercent > 0 ? food.BasePrice * (100 - food.DiscountPercent) / 100 : food.BasePrice); }
                                 <div class="price-section">
-                                    @if (food.DiscountPrice > 0)
+                                    @if (hasFoodOverride)
+                                    {
+                                        <span class="old-price">@baseEffectivePrice.ToString("N0") VNĐ</span>
+                                        <span class="price text-primary">@foodDynamicPrice.ToString("N0") VNĐ</span>
+                                    }
+                                    else if (food.DiscountPrice > 0)
                                     {
                                         <span class="old-price">@food.BasePrice.ToString("N0") VNĐ</span>
-                                        <span class="price">
-                                            @((food.BasePrice * (100 - food.DiscountPercent) / 100).ToString("N0")) VNĐ
-                                        </span>
+                                        <span class="price">@food.DiscountPrice.ToString("N0") VNĐ</span>
+                                    }
+                                    else if (food.DiscountPercent > 0)
+                                    {
+                                        <span class="old-price">@food.BasePrice.ToString("N0") VNĐ</span>
+                                        <span class="price">@((food.BasePrice * (100 - food.DiscountPercent) / 100).ToString("N0")) VNĐ</span>
                                     }
                                     else
                                     {
@@ -241,13 +262,22 @@
                                     <span class="stars">★★★★★</span>
                                     <span class="rating-text">(4.8)</span>
                                 </div> *@
+                                @{ var hasFoodOverride2 = Model.FoodPriceOverrides != null && Model.FoodPriceOverrides.TryGetValue(food.FoodItemId, out var foodDynamicPrice2); var baseEffectivePrice2 = food.DiscountPrice > 0 ? food.DiscountPrice : (food.DiscountPercent > 0 ? food.BasePrice * (100 - food.DiscountPercent) / 100 : food.BasePrice); }
                                 <div class="price-section">
-                                    @if (food.DiscountPrice > 0)
+                                    @if (hasFoodOverride2)
+                                    {
+                                        <span class="old-price">@baseEffectivePrice2.ToString("N0") VNĐ</span>
+                                        <span class="price text-primary">@foodDynamicPrice2.ToString("N0") VNĐ</span>
+                                    }
+                                    else if (food.DiscountPrice > 0)
                                     {
                                         <span class="old-price">@food.BasePrice.ToString("N0") VNĐ</span>
-                                        <span class="price">
-                                            @((food.BasePrice * (100 - food.DiscountPercent) / 100).ToString("N0")) VNĐ
-                                        </span>
+                                        <span class="price">@food.DiscountPrice.ToString("N0") VNĐ</span>
+                                    }
+                                    else if (food.DiscountPercent > 0)
+                                    {
+                                        <span class="old-price">@food.BasePrice.ToString("N0") VNĐ</span>
+                                        <span class="price">@((food.BasePrice * (100 - food.DiscountPercent) / 100).ToString("N0")) VNĐ</span>
                                     }
                                     else
                                     {
