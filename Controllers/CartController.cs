@@ -146,6 +146,24 @@ namespace ASM_1.Controllers
             bool isPrepaid = normalizedPayment is "momo" or "zalopay" or "vnpay";
             var nowLocal = DateTime.Now;
 
+            string splitMode = Request.Form["splitMode"];
+            string splitPayloadRaw = Request.Form["splitPayload"];
+            var splitPayload = PaymentSplitService.DeserializePayload(splitPayloadRaw);
+            var splitResult = PaymentSplitService.CalculateSplit(splitMode, splitPayload, cart.CartItems, finalAmount);
+
+            bool invoiceRequested = string.Equals(Request.Form["invoiceRequest"], "on", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(Request.Form["invoiceRequest"], "true", StringComparison.OrdinalIgnoreCase);
+
+            var invoiceRequest = PaymentSplitService.BuildInvoiceRequestInfo(
+                invoiceRequested,
+                Request.Form["invoiceCompanyName"],
+                Request.Form["invoiceTaxCode"],
+                Request.Form["invoiceEmail"],
+                Request.Form["invoiceAddress"],
+                Request.Form["invoiceNote"]);
+
+            var invoiceNote = PaymentSplitService.ComposeInvoiceNote(splitResult, invoiceRequest);
+
             using var tx = await _context.Database.BeginTransactionAsync();
             try
             {
@@ -156,7 +174,8 @@ namespace ASM_1.Controllers
                     TotalAmount = finalAmount,
                     FinalAmount = finalAmount,
                     Status = isPrepaid ? "Paid" : "Pending",
-                    Notes = null
+                    Notes = string.IsNullOrWhiteSpace(invoiceNote) ? null : invoiceNote,
+                    IsPrepaid = isPrepaid
                 };
                 _context.Invoices.Add(invoice);
                 await _context.SaveChangesAsync();
@@ -249,9 +268,33 @@ namespace ASM_1.Controllers
                 await _orderNotificationService.RefreshAndBroadcastAsync(order.OrderId);
 
                 TempData["OrderSuccess"] = true;
-                TempData["PaymentMethod"] = normalizedPayment;
+                TempData["PaymentMethodCode"] = normalizedPayment;
+                TempData["PaymentMethod"] = GetPaymentMethodDisplay(normalizedPayment);
                 TempData["TableName"] = order.TableNameSnapshot;
                 TempData["OrderCode"] = order.OrderCode;
+
+                if (!string.IsNullOrWhiteSpace(splitResult.Notes))
+                {
+                    TempData["PaymentSplitSummary"] = splitResult.Notes;
+                    TempData["PaymentSplitParticipants"] = JsonSerializer.Serialize(splitResult.Participants, new JsonSerializerOptions
+                    {
+                        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+                    });
+                    if (!string.IsNullOrWhiteSpace(splitResult.AdditionalNote))
+                    {
+                        TempData["PaymentSplitNote"] = splitResult.AdditionalNote;
+                    }
+                }
+
+                if (invoiceRequest?.IsRequested == true)
+                {
+                    TempData["InvoiceRequested"] = true;
+                    TempData["InvoiceCompany"] = invoiceRequest.CompanyName;
+                    TempData["InvoiceTaxCode"] = invoiceRequest.TaxCode;
+                    TempData["InvoiceEmail"] = invoiceRequest.Email;
+                    TempData["InvoiceAddress"] = invoiceRequest.Address;
+                    TempData["InvoiceNote"] = invoiceRequest.Note;
+                }
 
                 return RedirectToAction(nameof(Success), new { tableCode });
             }
@@ -354,7 +397,29 @@ namespace ASM_1.Controllers
                 return "cash";
             }
 
-            return method.Trim().ToLowerInvariant();
+            var normalized = method.Trim().ToLowerInvariant();
+            return normalized switch
+            {
+                "cod" => "cash",
+                "cash" => "cash",
+                "card" => "card",
+                "momo" => "momo",
+                "zalopay" => "zalopay",
+                "vnpay" => "vnpay",
+                _ => normalized
+            };
+        }
+
+        private static string GetPaymentMethodDisplay(string method)
+        {
+            return method switch
+            {
+                "momo" => "Ví MoMo",
+                "zalopay" => "ZaloPay",
+                "vnpay" => "VNPAY QR",
+                "card" => "Thẻ (POS)",
+                _ => "Tiền mặt tại quầy"
+            };
         }
 
         private static string NewInvoiceCode()

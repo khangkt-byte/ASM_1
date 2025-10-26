@@ -1,4 +1,5 @@
 ﻿@model List<ASM_1.Models.Food.CartItem>
+@using System.Text.Json
 @{
     ViewData["Title"] = "Thanh toán";
     var totalItems = Model?.Sum(x => x.Quantity) ?? 0;
@@ -11,6 +12,108 @@
 }
 @section Styles {
     <link rel="stylesheet" href="~/css/pages/checkout.css" />
+    <style>
+        .split-options {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-bottom: 15px;
+        }
+
+        .split-option {
+            flex: 1 1 220px;
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 10px;
+            padding: 12px 16px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+            .split-option input {
+                width: 20px;
+                height: 20px;
+            }
+
+            .split-option.active,
+            .split-option:hover {
+                border-color: #0d6efd;
+                background: #eef4ff;
+                box-shadow: 0 0 0 2px rgba(13, 110, 253, 0.1);
+            }
+
+        .participant-row {
+            display: grid;
+            grid-template-columns: minmax(140px, 1fr) 120px 120px 40px;
+            gap: 10px;
+            margin-bottom: 10px;
+            align-items: center;
+        }
+
+            .participant-row .participant-amount {
+                font-weight: 600;
+                color: #0d6efd;
+                text-align: right;
+            }
+
+        .participant-row .btn-remove {
+            color: #dc3545;
+            border: none;
+            background: transparent;
+            font-size: 16px;
+        }
+
+        .item-assignment {
+            border: 1px solid #e9ecef;
+            border-radius: 10px;
+            padding: 12px;
+            background: #fdfdfd;
+        }
+
+        .item-assignment-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 15px;
+            padding: 8px 0;
+            border-bottom: 1px dashed #dee2e6;
+        }
+
+            .item-assignment-row:last-child {
+                border-bottom: none;
+            }
+
+        .item-assignment-row .item-name {
+            font-weight: 500;
+            flex: 1 1 auto;
+        }
+
+        .split-summary {
+            margin-top: 12px;
+            border-top: 1px dashed #dee2e6;
+            padding-top: 12px;
+        }
+
+        .invoice-details {
+            margin-top: 15px;
+            padding: 12px;
+            border-radius: 10px;
+            background: #f8f9fa;
+        }
+
+        @media (max-width: 768px) {
+            .participant-row {
+                grid-template-columns: 1fr;
+            }
+
+                .participant-row .participant-amount {
+                    text-align: left;
+                }
+        }
+    </style>
 }
 
 <div class="checkout-page">
@@ -50,6 +153,59 @@
             <div class="checkout-main">
                 <form id="checkoutForm" asp-controller="Cart" asp-action="PlaceOrder" asp-route-tableCode="@tableCode" method="post">
                     @Html.AntiForgeryToken()
+                    <input type="hidden" name="splitMode" id="splitModeInput" value="single" />
+                    <input type="hidden" name="splitPayload" id="splitPayloadInput" />
+
+                    <div class="checkout-section">
+                        <h2><i class="fas fa-users"></i> Chia hóa đơn</h2>
+
+                        <div class="split-options" id="splitModeOptions">
+                            <label class="split-option active">
+                                <input type="radio" name="splitModeSelector" value="single" checked>
+                                <div>
+                                    <strong>Một người thanh toán</strong>
+                                    <div>Người đại diện thanh toán toàn bộ hóa đơn</div>
+                                </div>
+                            </label>
+                            <label class="split-option">
+                                <input type="radio" name="splitModeSelector" value="equal">
+                                <div>
+                                    <strong>Chia đều bill</strong>
+                                    <div>Mỗi người trả phần bằng nhau</div>
+                                </div>
+                            </label>
+                            <label class="split-option">
+                                <input type="radio" name="splitModeSelector" value="percentage">
+                                <div>
+                                    <strong>Chia theo %</strong>
+                                    <div>Định phần trăm cho từng người</div>
+                                </div>
+                            </label>
+                            <label class="split-option">
+                                <input type="radio" name="splitModeSelector" value="items">
+                                <div>
+                                    <strong>Chia theo món</strong>
+                                    <div>Ai gọi món nào trả món đó</div>
+                                </div>
+                            </label>
+                        </div>
+
+                        <div class="participant-controls mb-3">
+                            <div id="participantList"></div>
+                            <button type="button" class="btn btn-outline-primary btn-sm" id="addParticipantBtn">
+                                <i class="fas fa-user-plus"></i> Thêm người cùng bàn
+                            </button>
+                        </div>
+
+                        <div id="itemAssignment" class="item-assignment d-none"></div>
+
+                        <div class="mb-3">
+                            <label class="form-label" for="splitNoteInput">Ghi chú chia bill (tuỳ chọn)</label>
+                            <textarea class="form-control" id="splitNoteInput" rows="2" placeholder="Ví dụ: Anh A trả giúp bàn"></textarea>
+                        </div>
+
+                        <div class="split-summary" id="splitSummary"></div>
+                    </div>
 
                     <!-- Payment Method -->
                     <div class="checkout-section">
@@ -80,6 +236,18 @@
                                 </div>
                             </label>
                             <label class="payment-method">
+                                <input type="radio" name="paymentMethod" value="card">
+                                <div class="payment-info">
+                                    <div class="payment-icon">
+                                        <i class="fas fa-credit-card"></i>
+                                    </div>
+                                    <div class="payment-details">
+                                        <strong>Thanh toán bằng thẻ</strong>
+                                        <span>Quẹt thẻ tại quầy hoặc mang máy tới bàn</span>
+                                    </div>
+                                </div>
+                            </label>
+                            <label class="payment-method">
                                 <input type="radio" name="paymentMethod" value="zalopay">
                                 <div class="payment-info">
                                     <div class="payment-icon">
@@ -105,6 +273,39 @@
                             </label>
                         </div>
                     </div>
+
+                    <div class="checkout-section">
+                        <h2><i class="fas fa-file-invoice"></i> Thông tin hóa đơn</h2>
+                        <div class="form-check form-switch mb-3">
+                            <input class="form-check-input" type="checkbox" id="invoiceRequestToggle" name="invoiceRequest">
+                            <label class="form-check-label" for="invoiceRequestToggle">Yêu cầu xuất hóa đơn VAT</label>
+                        </div>
+                        <div id="invoiceDetails" class="invoice-details d-none">
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Tên công ty / người nhận hóa đơn</label>
+                                    <input type="text" class="form-control" name="invoiceCompanyName" />
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Mã số thuế</label>
+                                    <input type="text" class="form-control" name="invoiceTaxCode" />
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Email nhận hóa đơn</label>
+                                    <input type="email" class="form-control" name="invoiceEmail" />
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Địa chỉ</label>
+                                    <input type="text" class="form-control" name="invoiceAddress" />
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label">Ghi chú cho hóa đơn</label>
+                                    <textarea class="form-control" name="invoiceNote" rows="2" placeholder="Ví dụ: Xuất hóa đơn cho công ty..."></textarea>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                 </form>
             </div>
 
@@ -122,7 +323,6 @@
                                     <div class="item-info">
                                         <h4>@item.ProductName</h4>
 
-                                        <!-- Danh sách Option (linh hoạt theo OptionType) -->
                                         @if (item.Options != null && item.Options.Any())
                                         {
                                             <ul class="item-options">
@@ -133,7 +333,6 @@
                                             </ul>
                                         }
 
-                                        <!-- Ghi chú -->
                                         @if (!string.IsNullOrEmpty(item.Note))
                                         {
                                             <div class="item-note">
@@ -185,7 +384,6 @@
                             <i class="fas fa-arrow-left"></i> Quay lại giỏ hàng
                         </a>
 
-                        <!-- Nút đặt hàng -->
                         <button type="submit" class="btn-place-order" form="checkoutForm">
                             <i class="fas fa-check"></i>
                             Thanh toán
@@ -201,40 +399,413 @@
 
 @section Scripts {
     <script>
-                // CHỈ XỬ LÝ PHÍ GIAO HÀNG - KHÔNG CÓ VALIDATION PHỨC TẠP
-                // document.addEventListener('DOMContentLoaded', function() {
-                //     var radios = document.getElementsByName('deliveryTime');
-                //     var schedule = document.getElementById('scheduleOptions');
-                //     var fee = document.getElementById('shippingFee');
-                //     var total = document.getElementById('totalAmount');
-                //     var base = @subtotal;
+        (function () {
+            const cartItems = @Html.Raw(JsonSerializer.Serialize(Model.Select(item => new
+            {
+                id = item.CartItemID,
+                name = item.ProductName,
+                total = item.UnitPrice * item.Quantity,
+                quantity = item.Quantity
+            })));
 
-                //     function update() {
-                //         var shipping = 0;
-                //         for (var i = 0; i < radios.length; i++) {
-                //             if (radios[i].checked && radios[i].value === 'delivery') {
-                //                 shipping = 30000;
-                //                 if (schedule) schedule.style.display = 'block';
-                //                 break;
-                //             }
-                //         }
-                //         if (shipping === 0 && schedule) {
-                //             schedule.style.display = 'none';
-                //         }
-                //         if (fee) fee.textContent = shipping.toLocaleString('vi-VN') + '₫';
-                //         if (total) total.textContent = (base + shipping).toLocaleString('vi-VN') + '₫';
-                //     }
+            const totalAmount = @subtotal;
 
-                //     for (var i = 0; i < radios.length; i++) {
-                //         radios[i].addEventListener('change', update);
-                //     }
-                //     update();
-                // });
+            const splitModeOptions = document.getElementById('splitModeOptions');
+            const participantList = document.getElementById('participantList');
+            const addParticipantBtn = document.getElementById('addParticipantBtn');
+            const splitSummary = document.getElementById('splitSummary');
+            const splitNoteInput = document.getElementById('splitNoteInput');
+            const itemAssignment = document.getElementById('itemAssignment');
+            const splitModeInput = document.getElementById('splitModeInput');
+            const splitPayloadInput = document.getElementById('splitPayloadInput');
+            const invoiceToggle = document.getElementById('invoiceRequestToggle');
+            const invoiceDetails = document.getElementById('invoiceDetails');
+            const checkoutForm = document.getElementById('checkoutForm');
 
-                document.getElementById('checkoutForm').addEventListener('submit', function() {
-            const btn = document.querySelector('.btn-place-order');
-            btn.disabled = true;
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang xử lý...';
-        });
+            const currencyFormatter = new Intl.NumberFormat('vi-VN');
+
+            const splitState = {
+                mode: 'single',
+                participants: [],
+                latestShares: [],
+                notes: ''
+            };
+
+            const itemAssignmentsMap = new Map();
+
+            function createParticipant(name = '') {
+                if (window.crypto && window.crypto.randomUUID) {
+                    return {
+                        id: crypto.randomUUID(),
+                        name,
+                        percentage: null
+                    };
+                }
+
+                return {
+                    id: Date.now().toString(36) + Math.random().toString(36).slice(2),
+                    name,
+                    percentage: null
+                };
+            }
+
+            function ensureDefaultParticipant() {
+                if (splitState.participants.length === 0) {
+                    splitState.participants.push(createParticipant('Tôi'));
+                }
+            }
+
+            function onModeChanged(newMode) {
+                splitState.mode = newMode;
+                splitModeInput.value = newMode;
+                renderParticipants();
+                renderItemAssignments();
+                updateSummary();
+            }
+
+            function renderParticipants() {
+                ensureDefaultParticipant();
+                participantList.innerHTML = '';
+
+                splitState.participants.forEach((participant, index) => {
+                    const row = document.createElement('div');
+                    row.className = 'participant-row';
+                    row.dataset.id = participant.id;
+
+                    const nameInput = document.createElement('input');
+                    nameInput.type = 'text';
+                    nameInput.className = 'form-control participant-name';
+                    nameInput.placeholder = `Tên người tham gia ${index + 1}`;
+                    nameInput.value = participant.name || '';
+                    nameInput.addEventListener('input', () => {
+                        participant.name = nameInput.value;
+                        refreshItemAssignmentOptions();
+                        updateSummary();
+                    });
+
+                    const percentInput = document.createElement('input');
+                    percentInput.type = 'number';
+                    percentInput.className = 'form-control participant-percentage';
+                    percentInput.step = '0.01';
+                    percentInput.min = '0';
+                    percentInput.max = '100';
+                    percentInput.placeholder = '%';
+                    percentInput.value = participant.percentage ?? '';
+                    percentInput.style.display = splitState.mode === 'percentage' ? 'block' : 'none';
+                    percentInput.addEventListener('input', () => {
+                        participant.percentage = percentInput.value ? parseFloat(percentInput.value) : null;
+                        updateSummary();
+                    });
+
+                    const amountLabel = document.createElement('div');
+                    amountLabel.className = 'participant-amount';
+                    amountLabel.textContent = '0₫';
+
+                    const removeBtn = document.createElement('button');
+                    removeBtn.type = 'button';
+                    removeBtn.className = 'btn-remove';
+                    removeBtn.innerHTML = '<i class="fas fa-times"></i>';
+                    removeBtn.title = 'Xóa người này';
+                    removeBtn.addEventListener('click', () => removeParticipant(participant.id));
+
+                    if (splitState.participants.length === 1) {
+                        removeBtn.disabled = true;
+                        removeBtn.classList.add('text-muted');
+                    }
+
+                    row.appendChild(nameInput);
+                    row.appendChild(percentInput);
+                    row.appendChild(amountLabel);
+                    row.appendChild(removeBtn);
+
+                    participantList.appendChild(row);
+                });
+            }
+
+            function removeParticipant(id) {
+                if (splitState.participants.length <= 1) {
+                    return;
+                }
+
+                splitState.participants = splitState.participants.filter(p => p.id !== id);
+                Array.from(itemAssignmentsMap.entries()).forEach(([key, value]) => {
+                    if (value === id) {
+                        itemAssignmentsMap.delete(key);
+                    }
+                });
+                renderParticipants();
+                renderItemAssignments();
+                updateSummary();
+            }
+
+            function renderItemAssignments() {
+                itemAssignment.innerHTML = '';
+                if (splitState.mode !== 'items') {
+                    itemAssignment.classList.add('d-none');
+                    return;
+                }
+
+                itemAssignment.classList.remove('d-none');
+
+                cartItems.forEach(item => {
+                    const row = document.createElement('div');
+                    row.className = 'item-assignment-row';
+                    row.dataset.itemId = item.id;
+
+                    const name = document.createElement('div');
+                    name.className = 'item-name';
+                    name.innerHTML = `${item.name} <span class="text-muted">x${item.quantity}</span>`;
+
+                    const select = document.createElement('select');
+                    select.className = 'form-select form-select-sm item-participant-select';
+
+                    const emptyOption = document.createElement('option');
+                    emptyOption.value = '';
+                    emptyOption.textContent = 'Chưa chọn';
+                    select.appendChild(emptyOption);
+
+                    splitState.participants.forEach(p => {
+                        const option = document.createElement('option');
+                        option.value = p.id;
+                        option.textContent = p.name || 'Người mới';
+                        select.appendChild(option);
+                    });
+
+                    const current = itemAssignmentsMap.get(String(item.id)) || '';
+                    select.value = current;
+
+                    select.addEventListener('change', () => {
+                        if (select.value) {
+                            itemAssignmentsMap.set(String(item.id), select.value);
+                        } else {
+                            itemAssignmentsMap.delete(String(item.id));
+                        }
+                        updateSummary();
+                    });
+
+                    row.appendChild(name);
+                    row.appendChild(select);
+                    itemAssignment.appendChild(row);
+                });
+            }
+
+            function refreshItemAssignmentOptions() {
+                if (splitState.mode !== 'items') return;
+
+                const selects = itemAssignment.querySelectorAll('select.item-participant-select');
+                selects.forEach(select => {
+                    const currentValue = select.value;
+                    select.innerHTML = '';
+                    const emptyOption = document.createElement('option');
+                    emptyOption.value = '';
+                    emptyOption.textContent = 'Chưa chọn';
+                    select.appendChild(emptyOption);
+
+                    splitState.participants.forEach(p => {
+                        const option = document.createElement('option');
+                        option.value = p.id;
+                        option.textContent = p.name || 'Người mới';
+                        select.appendChild(option);
+                    });
+
+                    if (currentValue && Array.from(select.options).some(opt => opt.value === currentValue)) {
+                        select.value = currentValue;
+                    } else {
+                        select.value = '';
+                    }
+                });
+            }
+
+            function calculateShares() {
+                const participants = splitState.participants;
+                if (!participants.length) {
+                    return [];
+                }
+
+                if (splitState.mode === 'percentage') {
+                    const valid = participants.filter(p => p.name && p.percentage && p.percentage > 0);
+                    if (!valid.length) {
+                        return calculateSingleParticipant();
+                    }
+                    let sum = valid.reduce((acc, p) => acc + p.percentage, 0);
+                    if (sum <= 0) sum = 100;
+                    return valid.map((p, index) => {
+                        const normalized = (p.percentage / sum) * 100;
+                        const amount = totalAmount * normalized / 100;
+                        return {
+                            id: p.id,
+                            name: (p.name || `Khách ${index + 1}`).trim(),
+                            amount,
+                            percentage: normalized
+                        };
+                    });
+                }
+
+                if (splitState.mode === 'equal') {
+                    const valid = participants.filter(p => (p.name || '').trim().length > 0);
+                    const list = valid.length ? valid : participants;
+                    const share = totalAmount / list.length;
+                    return list.map((p, index) => ({
+                        id: p.id,
+                        name: (p.name || `Khách ${index + 1}`).trim(),
+                        amount: share,
+                        percentage: 100 / list.length
+                    }));
+                }
+
+                if (splitState.mode === 'items') {
+                    const result = participants.map((p, index) => ({
+                        id: p.id,
+                        name: (p.name || `Khách ${index + 1}`).trim(),
+                        amount: 0,
+                        items: []
+                    }));
+
+                    cartItems.forEach(item => {
+                        const key = String(item.id);
+                        const assigned = itemAssignmentsMap.get(key);
+                        if (!assigned) {
+                            return;
+                        }
+                        const target = result.find(r => r.id === assigned);
+                        if (target) {
+                            target.amount += item.total;
+                            target.items.push(item.name);
+                        }
+                    });
+
+                    const distributed = result.reduce((acc, curr) => acc + curr.amount, 0);
+                    if (Math.abs(totalAmount - distributed) > 1) {
+                        const fallback = result[0];
+                        if (fallback) {
+                            fallback.amount += totalAmount - distributed;
+                        }
+                    }
+
+                    return result;
+                }
+
+                return calculateSingleParticipant();
+            }
+
+            function calculateSingleParticipant() {
+                const first = splitState.participants[0];
+                return [{
+                    id: first.id,
+                    name: (first.name || 'Khách thanh toán').trim(),
+                    amount: totalAmount,
+                    percentage: 100
+                }];
+            }
+
+            function updateSummary() {
+                const shares = calculateShares();
+                splitState.latestShares = shares;
+
+                participantList.querySelectorAll('.participant-row').forEach(row => {
+                    const amountEl = row.querySelector('.participant-amount');
+                    const share = shares.find(s => s.id === row.dataset.id);
+                    if (amountEl) {
+                        const amount = share ? share.amount : 0;
+                        amountEl.textContent = `${currencyFormatter.format(amount)}₫`;
+                    }
+                    const percentInput = row.querySelector('.participant-percentage');
+                    if (percentInput) {
+                        percentInput.style.display = splitState.mode === 'percentage' ? 'block' : 'none';
+                    }
+                });
+
+                if (!shares.length) {
+                    splitSummary.innerHTML = '';
+                    return;
+                }
+
+                const lines = shares.map(share => {
+                    const amountText = `${currencyFormatter.format(share.amount)}₫`;
+                    if (share.items && share.items.length) {
+                        return `<div><strong>${share.name}</strong>: ${amountText} <small class="text-muted">(${share.items.join(', ')})</small></div>`;
+                    }
+                    if (typeof share.percentage === 'number') {
+                        return `<div><strong>${share.name}</strong>: ${amountText} (${share.percentage.toFixed(1)}%)</div>`;
+                    }
+                    return `<div><strong>${share.name}</strong>: ${amountText}</div>`;
+                });
+
+                splitSummary.innerHTML = `<strong>Chi tiết chia bill:</strong>${lines.join('')}`;
+            }
+
+            function buildPayload() {
+                const payload = {
+                    participants: splitState.participants.map(p => ({
+                        name: (p.name || '').trim()
+                    })),
+                    notes: splitNoteInput.value.trim() || null
+                };
+
+                if (splitState.mode === 'percentage') {
+                    payload.participants.forEach((entry, index) => {
+                        const participant = splitState.participants[index];
+                        entry.percentage = participant.percentage ?? null;
+                    });
+                }
+
+                if (splitState.mode === 'items') {
+                    payload.participants.forEach(entry => {
+                        entry.itemKeys = [];
+                    });
+
+                    itemAssignmentsMap.forEach((participantId, itemId) => {
+                        const idx = splitState.participants.findIndex(p => p.id === participantId);
+                        if (idx >= 0) {
+                            payload.participants[idx].itemKeys.push(itemId);
+                        }
+                    });
+                }
+
+                return payload;
+            }
+
+            splitModeOptions.querySelectorAll('label.split-option').forEach(label => {
+                const input = label.querySelector('input[type="radio"]');
+                input.addEventListener('change', () => {
+                    if (input.checked) {
+                        splitModeOptions.querySelectorAll('label.split-option').forEach(l => l.classList.remove('active'));
+                        label.classList.add('active');
+                        onModeChanged(input.value);
+                    }
+                });
+            });
+
+            addParticipantBtn.addEventListener('click', () => {
+                splitState.participants.push(createParticipant(''));
+                renderParticipants();
+                refreshItemAssignmentOptions();
+                updateSummary();
+            });
+
+            splitNoteInput.addEventListener('input', () => {
+                splitState.notes = splitNoteInput.value;
+            });
+
+            if (invoiceToggle && invoiceDetails) {
+                invoiceToggle.addEventListener('change', () => {
+                    invoiceDetails.classList.toggle('d-none', !invoiceToggle.checked);
+                });
+            }
+
+            checkoutForm.addEventListener('submit', () => {
+                splitPayloadInput.value = JSON.stringify(buildPayload());
+                const btn = document.querySelector('.btn-place-order');
+                if (btn) {
+                    btn.disabled = true;
+                    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang xử lý...';
+                }
+            });
+
+            splitState.participants.push(createParticipant('Tôi'));
+            renderParticipants();
+            renderItemAssignments();
+            updateSummary();
+        })();
     </script>
 }
