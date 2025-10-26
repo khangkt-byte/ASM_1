@@ -94,6 +94,19 @@
     transform-origin: center;
 }
 
+.menu-item-card.out-of-stock {
+    border-color: rgba(220, 53, 69, 0.35);
+    opacity: 0.85;
+}
+
+.menu-item-card.out-of-stock .menu-item-image {
+    filter: grayscale(0.45);
+}
+
+.menu-item-card.out-of-stock .menu-item-overlay {
+    background: rgba(0, 0, 0, 0.55);
+}
+
     .menu-item-card:hover {
         transform: translateY(-8px);
         box-shadow: 0 15px 40px rgba(0,0,0,0.15);
@@ -119,6 +132,16 @@
     z-index: 3;
     text-transform: uppercase;
     letter-spacing: 0.5px;
+}
+
+.stock-message {
+    margin-top: 12px;
+    color: #dc3545;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.9rem;
 }
 
 .menu-item-image {
