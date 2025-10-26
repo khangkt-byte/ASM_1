@@ -137,6 +137,7 @@ document.addEventListener('DOMContentLoaded', function () {
         // ensure sanitized queue is written back so invalid entries are cleared
         savePersistentNotifications(queuedNotifications);
         queuedNotifications.forEach(entry => {
+            removePersistentNotification(entry.id);
             showNotification(entry.message, entry.type, {
                 duration: entry.duration,
                 storageId: entry.id
@@ -164,7 +165,7 @@ function addToCart(foodId) {
 function showNotification(message, type = 'info', options) {
     const opts = (options && typeof options === 'object') ? options : {};
     const storageId = typeof opts.storageId === 'string' && opts.storageId ? opts.storageId : null;
-    const persist = Boolean(opts.persist || storageId);
+    const persist = opts.persist === true;
     const duration = Number.isFinite(opts.duration) && opts.duration > 0 ? opts.duration : 5000;
     const normalizedType = typeof type === 'string' ? type.toLowerCase() : 'info';
     const resolvedType = ['success', 'error', 'warning', 'info'].includes(normalizedType)
@@ -260,8 +261,10 @@ function showNotification(message, type = 'info', options) {
         window.setTimeout(finalizeRemoval, 250);
     };
 
+    const shouldAutoHide = opts.autoHide !== false;
+
     const startHideTimer = (delay) => {
-        if (!persist && delay > 0) {
+        if (shouldAutoHide && delay > 0) {
             hideTimer = window.setTimeout(hideNotification, delay);
         }
     };
@@ -273,7 +276,7 @@ function showNotification(message, type = 'info', options) {
         }
     };
 
-    if (!persist) {
+    if (shouldAutoHide) {
         startHideTimer(duration);
     }
 
