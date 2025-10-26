@@ -15,6 +15,7 @@ namespace ASM_1.Models.Food
         //[Column(TypeName = "decimal(18,2)")] public decimal OptionsDeltaTotal { get; set; }  // tổng chênh do option
         //[Column(TypeName = "decimal(18,2)")] public decimal UnitFinalPrice { get; set; }     // base + delta
         [Column(TypeName = "decimal(18,2)")] public decimal LineTotal { get; set; }          // UnitFinalPrice * Qty
+        [Required] public OrderStatus Status { get; set; } = OrderStatus.Pending;
         [MaxLength(200)] public string? Note { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public ICollection<OrderItemOption> Options { get; set; } = new List<OrderItemOption>();

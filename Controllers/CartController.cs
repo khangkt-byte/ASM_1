@@ -186,7 +186,8 @@ namespace ASM_1.Controllers
                     CreatedDate = nowLocal,
                     TotalAmount = finalAmount,                    // tổng theo thời điểm đặt
                     FinalAmount = finalAmount,                    // có thể áp mã giảm/fees sau
-                    Status = isPrepaid ? "Paid" : "Pending", // trả trước = Paid, trả sau = Pending
+                    Status = "Pending",
+                    IsPrepaid = isPrepaid,
                     Notes = note
                 };
                 _context.Invoices.Add(invoice);
@@ -204,6 +205,7 @@ namespace ASM_1.Controllers
                         //OptionsDeltaTotal = 0m,                             // nếu bạn tách delta option, set đúng tại đây
                         //UnitFinalPrice = ci.UnitPrice,
                         LineTotal = ci.UnitPrice * ci.Quantity,
+                        Status = OrderStatus.Pending,
                         Note = ci.Note,
                         CreatedAt = DateTime.UtcNow
                     };

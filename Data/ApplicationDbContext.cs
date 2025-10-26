@@ -186,7 +186,7 @@ namespace ASM_1.Data
             // ======================================================================
             builder.Entity<OrderItem>()
                 .HasOne(x => x.Invoice)
-                .WithMany()                                // không cần nav ngược trên Invoice
+                .WithMany(i => i.OrderItems)
                 .HasForeignKey(x => x.InvoiceId)
                 .OnDelete(DeleteBehavior.Cascade);
 
@@ -220,6 +220,9 @@ namespace ASM_1.Data
                 .WithMany()
                 .HasForeignKey(x => x.OptionGroupId)
                 .OnDelete(DeleteBehavior.SetNull);
+            builder.Entity<Invoice>()
+                .Property(i => i.IsPrepaid)
+                .HasDefaultValue(false);
         }
     }
 }
