@@ -1,4 +1,6 @@
 using ASM_1.Models.Food;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace ASM_1.Services
 {
@@ -6,7 +8,12 @@ namespace ASM_1.Services
     {
         public static OrderStatus Calculate(IEnumerable<OrderItem> items)
         {
-            var statuses = items.Select(i => i.Status).ToList();
+            return CalculateFromStatuses((items ?? Enumerable.Empty<OrderItem>()).Select(i => i.Status));
+        }
+
+        public static OrderStatus CalculateFromStatuses(IEnumerable<OrderStatus> statusesSource)
+        {
+            var statuses = statusesSource?.ToList() ?? new List<OrderStatus>();
             if (statuses.Count == 0)
             {
                 return OrderStatus.Pending;
