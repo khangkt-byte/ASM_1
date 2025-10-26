@@ -63,6 +63,7 @@ document.addEventListener('DOMContentLoaded', function () {
         };
 
         ensureResponsiveState();
+        sidebar.classList.remove('sidebar--initial');
 
         sidebarToggleBtns.forEach((btn) => {
             btn.addEventListener('click', () => {
