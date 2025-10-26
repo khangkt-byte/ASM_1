@@ -7,11 +7,16 @@ document.addEventListener('DOMContentLoaded', function () {
     const themeIcon = themeToggleBtn ? themeToggleBtn.querySelector('.theme-icon') : null;
     const themeText = themeToggleBtn ? themeToggleBtn.querySelector('.theme-text') : null;
     const menuLinks = document.querySelectorAll('.menu-link');
+    const sidebarOverlay = document.querySelector('.admin-overlay');
 
     const updateThemeIndicators = () => {
         const isCollapsed = sidebar ? sidebar.classList.contains('collapsed') : false;
         const shouldLockScroll = !!sidebar && !isCollapsed && window.innerWidth <= 768;
         body.classList.toggle('sidebar-open', shouldLockScroll);
+
+        if (sidebarOverlay) {
+            sidebarOverlay.classList.toggle('visible', shouldLockScroll);
+        }
 
         if (!themeIcon) {
             return;
@@ -64,7 +69,9 @@ document.addEventListener('DOMContentLoaded', function () {
         };
 
         ensureResponsiveState();
-        sidebar.classList.remove('sidebar--initial');
+        requestAnimationFrame(() => {
+            sidebar.classList.remove('sidebar--initial');
+        });
 
         sidebarToggleBtns.forEach((btn) => {
             btn.addEventListener('click', () => {
@@ -83,6 +90,15 @@ document.addEventListener('DOMContentLoaded', function () {
                     if (searchInput) {
                         searchInput.focus();
                     }
+                    updateThemeIndicators();
+                }
+            });
+        }
+
+        if (sidebarOverlay) {
+            sidebarOverlay.addEventListener('click', () => {
+                if (!sidebar.classList.contains('collapsed')) {
+                    sidebar.classList.add('collapsed');
                     updateThemeIndicators();
                 }
             });
