@@ -1,5 +1,4 @@
 ﻿@model List<ASM_1.Models.Food.CartItem>
-@using System.Linq
 @using System.Text.Json
 @using System.Text.Json.Serialization
 @{
@@ -11,16 +10,14 @@
     var dynamicFactor = ViewBag.DynamicPriceFactor as decimal?;
     var lastDiscountCode = ViewBag.LastDiscountCode as string ?? string.Empty;
     var discountError = ViewBag.DiscountError as string;
-    var cartPayload = (Model ?? Enumerable.Empty<ASM_1.Models.Food.CartItem>()).Select(item => new
+    var cartPayload = Model?.Select(item => new
     {
         id = item.CartItemID,
         name = item.ProductName,
         quantity = item.Quantity,
         price = item.UnitPrice,
-        options = item.Options == null
-            ? Array.Empty<object>()
-            : item.Options.Select(o => (object)new { group = o.OptionTypeName, name = o.OptionName }).ToArray()
-    });
+        options = item.Options?.Select(o => new { group = o.OptionTypeName, name = o.OptionName }) ?? Array.Empty<object>()
+    }) ?? Array.Empty<object>();
     var cartItemsJson = JsonSerializer.Serialize(cartPayload, new JsonSerializerOptions
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
@@ -121,7 +118,7 @@
             background: #f8f9fa;
         }
 
-        @@media (max-width: 768px) {
+        @media (max-width: 768px) {
             .participant-row {
                 grid-template-columns: 1fr;
             }

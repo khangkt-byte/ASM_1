@@ -134,15 +134,13 @@ namespace ASM_1.Controllers
                     .ThenInclude(i => i.Options)
                 .FirstOrDefaultAsync(c => c.UserID == userId);
 
-            if (cart?.CartItems == null || !cart.CartItems.Any())
+            if (cart == null || cart.CartItems == null || !cart.CartItems.Any())
             {
                 TempData["ErrorMessage"] = "Giỏ hàng của bạn đang trống.";
                 return RedirectToAction(nameof(Index), new { tableCode });
             }
 
-            var cartItems = cart.CartItems.ToList();
-
-            var subtotal = cartItems.Sum(x => x.UnitPrice * x.Quantity);
+            var subtotal = cart.CartItems.Sum(x => x.UnitPrice * x.Quantity);
             decimal shipping = 0m; // tuỳ chính sách giao/nhận
             var finalAmount = subtotal + shipping;
 
@@ -159,14 +157,14 @@ namespace ASM_1.Controllers
                 }
             }
 
-            var splitComputation = PaymentSplitCalculator.Compute(splitRequest, cartItems, finalAmount, normalizedPayment);
-            bool isPrepaid = splitComputation.AllPrepaid;
+            var splitResult = PaymentSplitCalculator.Compute(splitRequest, cart.CartItems, finalAmount, normalizedPayment);
+            bool isPrepaid = splitResult.AllPrepaid;
             var nowLocal = DateTime.Now;
 
             string splitMode = Request.Form["splitMode"];
             string splitPayloadRaw = Request.Form["splitPayload"];
             var splitPayload = PaymentSplitService.DeserializePayload(splitPayloadRaw);
-            var splitDisplay = PaymentSplitService.CalculateSplit(splitMode, splitPayload, cartItems, finalAmount);
+            var splitResult = PaymentSplitService.CalculateSplit(splitMode, splitPayload, cart.CartItems, finalAmount);
 
             bool invoiceRequested = string.Equals(Request.Form["invoiceRequest"], "on", StringComparison.OrdinalIgnoreCase)
                 || string.Equals(Request.Form["invoiceRequest"], "true", StringComparison.OrdinalIgnoreCase);
@@ -179,7 +177,7 @@ namespace ASM_1.Controllers
                 Request.Form["invoiceAddress"],
                 Request.Form["invoiceNote"]);
 
-            var invoiceNote = PaymentSplitService.ComposeInvoiceNote(splitDisplay, invoiceRequest);
+            var invoiceNote = PaymentSplitService.ComposeInvoiceNote(splitResult, invoiceRequest);
 
             using var tx = await _context.Database.BeginTransactionAsync();
             try
@@ -191,7 +189,7 @@ namespace ASM_1.Controllers
                     TotalAmount = finalAmount,
                     FinalAmount = finalAmount,
                     Status = isPrepaid ? "Paid" : "Pending",
-                    Notes = splitComputation.DisplayLabel,
+                    Notes = splitResult.DisplayLabel,
                     IsPrepaid = isPrepaid
                 };
                 _context.Invoices.Add(invoice);
@@ -206,7 +204,7 @@ namespace ASM_1.Controllers
                     Status = OrderStatus.Pending,
                     Note = null,
                     TotalAmount = finalAmount,
-                    PaymentMethod = BuildOrderPaymentLabel(splitComputation),
+                    PaymentMethod = BuildOrderPaymentLabel(splitResult),
                     InvoiceId = invoice.InvoiceId,
                     CreatedAt = nowLocal,
                     UpdatedAt = nowLocal
@@ -216,7 +214,7 @@ namespace ASM_1.Controllers
 
                 var createdItems = new List<(OrderItem OrderItem, CartItem CartItem)>();
 
-                foreach (var ci in cartItems)
+                foreach (var ci in cart.CartItems)
                 {
                     var orderItem = new OrderItem
                     {
@@ -272,9 +270,9 @@ namespace ASM_1.Controllers
                     _context.OrderItemOptions.AddRange(optionSnapshots);
                 }
 
-                if (splitComputation.Shares.Count > 0)
+                if (splitResult.Shares.Count > 0)
                 {
-                    foreach (var share in splitComputation.Shares)
+                    foreach (var share in splitResult.Shares)
                     {
                         string? meta = null;
                         if (share.ItemQuantities != null && share.ItemQuantities.Count > 0)
@@ -293,7 +291,7 @@ namespace ASM_1.Controllers
                             DisplayName = share.DisplayName,
                             Amount = share.Amount,
                             PaymentMethod = share.PaymentMethod,
-                            SplitMode = splitComputation.Mode.ToString(),
+                            SplitMode = splitResult.Mode.ToString(),
                             Percentage = share.Percentage,
                             MetaJson = meta,
                             CreatedAt = nowLocal
@@ -301,7 +299,7 @@ namespace ASM_1.Controllers
                     }
                 }
 
-                _context.CartItems.RemoveRange(cartItems);
+                _context.CartItems.RemoveRange(cart.CartItems);
                 cart.UpdatedAt = DateTime.UtcNow;
 
                 await _context.SaveChangesAsync();
@@ -311,10 +309,10 @@ namespace ASM_1.Controllers
                 await _orderNotificationService.RefreshAndBroadcastAsync(order.OrderId);
 
                 TempData["OrderSuccess"] = true;
-                TempData["PaymentMethod"] = splitComputation.DisplayLabel;
+                TempData["PaymentMethod"] = splitResult.DisplayLabel;
                 TempData["TableName"] = order.TableNameSnapshot;
                 TempData["OrderCode"] = order.OrderCode;
-                TempData["PaymentShares"] = JsonSerializer.Serialize(splitComputation.Shares.Select(s => new
+                TempData["PaymentShares"] = JsonSerializer.Serialize(splitResult.Shares.Select(s => new
                 {
                     participantId = s.ParticipantId,
                     name = s.DisplayName,
@@ -323,18 +321,16 @@ namespace ASM_1.Controllers
                     percentage = s.Percentage
                 }), JsonOptions);
 
-                if (!string.IsNullOrWhiteSpace(splitDisplay.Notes))
+                if (!string.IsNullOrWhiteSpace(splitResult.Notes))
                 {
-                    TempData["PaymentSplitSummary"] = splitDisplay.Notes;
-                    TempData["PaymentSplitParticipants"] = JsonSerializer.Serialize(
-                        splitDisplay.Participants,
-                        new JsonSerializerOptions
-                        {
-                            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-                        });
-                    if (!string.IsNullOrWhiteSpace(splitDisplay.AdditionalNote))
+                    TempData["PaymentSplitSummary"] = splitResult.Notes;
+                    TempData["PaymentSplitParticipants"] = JsonSerializer.Serialize(splitResult.Participants, new JsonSerializerOptions
                     {
-                        TempData["PaymentSplitNote"] = splitDisplay.AdditionalNote;
+                        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+                    });
+                    if (!string.IsNullOrWhiteSpace(splitResult.AdditionalNote))
+                    {
+                        TempData["PaymentSplitNote"] = splitResult.AdditionalNote;
                     }
                 }
 
