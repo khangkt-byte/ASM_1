@@ -392,7 +392,13 @@
                     const summary = payload.summary;
                     const orderCode = summary.code || summary.invoiceCode || '#';
                     const tableName = summary.table || 'Bàn';
-                    const status = summary.status || '';
+                    const status = (summary.status || '').toString();
+                    const isServed = status.toLowerCase() === 'served';
+
+                    if (isServed) {
+                        requestRefresh();
+                        return;
+                    }
 
                     if (payload.isNewOrder) {
                         showToast('Đơn hàng mới', `${tableName} vừa gửi ${orderCode}`, 'warning');
