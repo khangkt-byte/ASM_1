@@ -55,7 +55,7 @@
 </head>
 <body class="admin-body">
     <nav class="site-nav">
-        <button class="sidebar-toggle" type="button">
+        <button class="sidebar-toggle" type="button" aria-label="Toggle sidebar">
             <span class="material-symbols-rounded">menu</span>
         </button>
     </nav>
@@ -65,14 +65,19 @@
             <div class="sidebar-header">
                 <div class="admin-logo">
                     <img src="~/Images/Food-logo.jpg" alt="Logo" class="header-logo">
-                    <span>Manage Panel</span>
+                    <span class="brand-text">Manage Panel</span>
                 </div>
-                <button class="sidebar-toggle" type="button">
+                <button class="sidebar-toggle" type="button" aria-label="Collapse sidebar">
                     <span class="material-symbols-rounded">chevron_left</span>
                 </button>
             </div>
 
             <div class="sidebar-content">
+                <form action="#" method="get" class="search-form" role="search">
+                    <span class="material-symbols-rounded" aria-hidden="true">search</span>
+                    <input type="search" name="q" placeholder="Tìm kiếm..." aria-label="Tìm kiếm" />
+                </form>
+
                 <ul class="menu-list">
                     @if (user != null)
                     {
@@ -87,19 +92,19 @@
                             <li class="menu-section">Quản lý Tài khoản</li>
                             <li class="menu-item">
                                 <a asp-area="Admin" asp-controller="Admin" asp-action="Index" class="menu-link">
-                                    <span class="material-symbols-rounded">dashboard</span>
+                                    <span class="material-symbols-rounded" aria-hidden="true">dashboard</span>
                                     <span class="menu-label">Dashboard Tài khoản</span>
                                 </a>
                             </li>
                             <li class="menu-item">
                                 <a asp-area="Admin" asp-controller="Admin" asp-action="ListUsers" class="menu-link">
-                                    <span class="material-symbols-rounded">group</span>
+                                    <span class="material-symbols-rounded" aria-hidden="true">group</span>
                                     <span class="menu-label">Quản lý người dùng</span>
                                 </a>
                             </li>
                             <li class="menu-item">
                                 <a asp-area="Admin" asp-controller="Admin" asp-action="ListRoles" class="menu-link">
-                                    <span class="material-symbols-rounded">supervisor_account</span>
+                                    <span class="material-symbols-rounded" aria-hidden="true">supervisor_account</span>
                                     <span class="menu-label">Quản lý vai trò</span>
                                 </a>
                             </li>
@@ -110,49 +115,49 @@
                             <li class="menu-section">Quản lý Đồ ăn</li>
                             <li class="menu-item">
                                 <a asp-area="Admin" asp-controller="Invoices" asp-action="Index" class="menu-link">
-                                    <span class="material-symbols-rounded">receipt_long</span>
+                                    <span class="material-symbols-rounded" aria-hidden="true">receipt_long</span>
                                     <span class="menu-label">Hóa đơn</span>
                                 </a>
                             </li>
                             <li class="menu-item">
                                 <a asp-area="Admin" asp-controller="Tables" asp-action="Index" class="menu-link">
-                                    <span class="material-symbols-rounded">table_restaurant</span>
+                                    <span class="material-symbols-rounded" aria-hidden="true">table_restaurant</span>
                                     <span class="menu-label">Quản lý bàn ăn</span>
                                 </a>
                             </li>
                             <li class="menu-item">
                                 <a asp-area="Admin" asp-controller="Categories" asp-action="Index" class="menu-link">
-                                    <span class="material-symbols-rounded">category</span>
+                                    <span class="material-symbols-rounded" aria-hidden="true">category</span>
                                     <span class="menu-label">Quản lý danh mục</span>
                                 </a>
                             </li>
                             <li class="menu-item">
                                 <a asp-area="Admin" asp-controller="FoodItems" asp-action="Index" class="menu-link">
-                                    <span class="material-symbols-rounded">restaurant</span>
+                                    <span class="material-symbols-rounded" aria-hidden="true">restaurant</span>
                                     <span class="menu-label">Quản lý món ăn</span>
                                 </a>
                             </li>
                             <li class="menu-item">
                                 <a asp-area="Admin" asp-controller="FoodOptions" asp-action="Index" class="menu-link">
-                                    <span class="material-symbols-rounded">tune</span>
+                                    <span class="material-symbols-rounded" aria-hidden="true">tune</span>
                                     <span class="menu-label">Quản lý tùy chọn món</span>
                                 </a>
                             </li>
                             <li class="menu-item">
                                 <a asp-area="Admin" asp-controller="Comboes" asp-action="Index" class="menu-link">
-                                    <span class="material-symbols-rounded">lunch_dining</span>
+                                    <span class="material-symbols-rounded" aria-hidden="true">lunch_dining</span>
                                     <span class="menu-label">Quản lý combo</span>
                                 </a>
                             </li>
                             <li class="menu-item">
                                 <a asp-area="Admin" asp-controller="ComboDetails" asp-action="Index" class="menu-link">
-                                    <span class="material-symbols-rounded">view_list</span>
+                                    <span class="material-symbols-rounded" aria-hidden="true">view_list</span>
                                     <span class="menu-label">Quản lý chi tiết combo</span>
                                 </a>
                             </li>
                             <li class="menu-item">
                                 <a asp-area="Admin" asp-controller="Discounts" asp-action="Index" class="menu-link">
-                                    <span class="material-symbols-rounded">local_offer</span>
+                                    <span class="material-symbols-rounded" aria-hidden="true">local_offer</span>
                                     <span class="menu-label">Quản lý giảm giá</span>
                                 </a>
                             </li>
@@ -163,7 +168,7 @@
                             <li class="menu-section">Khu bếp</li>
                             <li class="menu-item">
                                 <a asp-area="Staff" asp-controller="Kitchen" asp-action="Index" class="menu-link">
-                                    <span class="material-symbols-rounded">soup_kitchen</span>
+                                    <span class="material-symbols-rounded" aria-hidden="true">soup_kitchen</span>
                                     <span class="menu-label">KDS - Đơn cần chế biến</span>
                                 </a>
                             </li>
@@ -174,7 +179,7 @@
                             <li class="menu-section">Thu ngân</li>
                             <li class="menu-item">
                                 <a asp-area="Staff" asp-controller="Cashier" asp-action="Index" class="menu-link">
-                                    <span class="material-symbols-rounded">point_of_sale</span>
+                                    <span class="material-symbols-rounded" aria-hidden="true">point_of_sale</span>
                                     <span class="menu-label">Quản lý đơn &amp; in hóa đơn</span>
                                 </a>
                             </li>
@@ -186,7 +191,7 @@
             <div class="sidebar-footer">
                 <button class="theme-toggle" type="button">
                     <div class="theme-label">
-                        <span class="theme-icon material-symbols-rounded">dark_mode</span>
+                        <span class="theme-icon material-symbols-rounded" aria-hidden="true">dark_mode</span>
                         <span class="theme-text">Chế độ tối</span>
                     </div>
                     <div class="theme-toggle-track">
@@ -204,10 +209,10 @@
             </div>
         </aside>
 
-        <div class="main-content admin-main">
+        <main class="main-content">
             <header class="admin-header">
                 <div class="header-left">
-                    <button class="sidebar-toggle" type="button">
+                    <button class="sidebar-toggle" type="button" aria-label="Toggle sidebar">
                         <span class="material-symbols-rounded">menu</span>
                     </button>
                     <div class="breadcrumb">
@@ -216,22 +221,22 @@
                 </div>
 
                 <div class="header-right">
-                    <button class="notification-btn" type="button">
+                    <button class="notification-btn" type="button" aria-label="Thông báo">
                         <i class="fas fa-bell"></i>
                         <span class="notification-badge">5</span>
                     </button>
 
                     <div class="user-dropdown">
-                        <button class="user-dropdown-toggle" type="button">
+                        <button class="user-dropdown-toggle" type="button" aria-haspopup="true" aria-expanded="false">
                             <img src="@userAvatar" alt="Avatar" class="user-avatar">
                             <div class="user-info">
                                 <span class="user-name">@username</span>
                                 <span class="user-role">@userRole</span>
                             </div>
-                            <i class="fas fa-chevron-down"></i>
+                            <i class="fas fa-chevron-down" aria-hidden="true"></i>
                         </button>
 
-                        <div class="user-dropdown-menu">
+                        <div class="user-dropdown-menu" role="menu">
                             <div class="user-dropdown-header">
                                 <div>
                                     <strong>@username</strong>
@@ -241,29 +246,32 @@
 
                             <div class="dropdown-divider"></div>
 
-                            <a href="#" class="user-dropdown-item">
+                            <a href="#" class="user-dropdown-item" role="menuitem">
                                 <i class="fas fa-user"></i>
                                 Hồ sơ
                             </a>
 
-                            <a href="#" class="user-dropdown-item">
+                            <a href="#" class="user-dropdown-item" role="menuitem">
                                 <i class="fas fa-cog"></i>
                                 Cài đặt
                             </a>
 
-                            <a asp-controller="Account" asp-action="Logout" method="post" class="user-dropdown-item logout-item">
-                                <i class="fas fa-sign-out-alt"></i>
-                                <span>Đăng xuất</span>
-                            </a>
+                            <form asp-area="Admin" asp-controller="Account" asp-action="Logout" method="post" class="user-dropdown-item logout-item" role="none">
+                                @Html.AntiForgeryToken()
+                                <button type="submit">
+                                    <i class="fas fa-sign-out-alt"></i>
+                                    <span>Đăng xuất</span>
+                                </button>
+                            </form>
                         </div>
                     </div>
                 </div>
             </header>
 
-            <div class="admin-content">
+            <section class="admin-content">
                 @RenderBody()
-            </div>
-        </div>
+            </section>
+        </main>
     </div>
 
     @RenderSection("Scripts", required: false)
